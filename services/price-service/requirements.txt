@@ -1,0 +1,12 @@
+# =========================
+# requirements.txt (example)
+# =========================
+# fastapi
+# uvicorn[standard]
+# aioredis
+# influxdb-client
+# httpx
+# websockets
+# pydantic
+
+# End of starter code
