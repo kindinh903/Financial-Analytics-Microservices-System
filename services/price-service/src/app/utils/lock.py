@@ -1,7 +1,7 @@
 # =========================
 # src/app/utils/lock.py
 # =========================
-import aioredis
+import redis.asyncio as aioredis
 from contextlib import asynccontextmanager
 
 @asynccontextmanager

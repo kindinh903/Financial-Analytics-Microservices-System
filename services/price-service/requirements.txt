@@ -1,12 +1,27 @@
 # =========================
 # requirements.txt (example)
 # =========================
-# fastapi
-# uvicorn[standard]
-# aioredis
-# influxdb-client
-# httpx
-# websockets
-# pydantic
+fastapi==0.115.0
+uvicorn[standard]==0.30.1
 
-# End of starter code
+# Redis
+redis==5.0.7
+
+# InfluxDB
+influxdb-client==1.43.0
+
+# Background tasks và scheduling
+aiojobs==1.1.0
+
+# HTTP client cho việc gọi API ngoài (nếu cần)
+httpx==0.27.0
+
+# Xử lý môi trường
+python-dotenv==1.0.1
+
+# Optional: để format/log đẹp hơn
+loguru==0.7.2
+
+pydantic>=2.7.0
+pydantic-settings>=2.0.0
+
