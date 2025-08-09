@@ -27,7 +27,6 @@ SYMBOL_WHITELIST = [
     "ADAUSDT",
     "XRPUSDT",
     "DOGEUSDT",
-    "MATICUSDT",
     "DOTUSDT",
     "LTCUSDT"
 ]

@@ -59,9 +59,9 @@ class InfluxWriter:
     async def query_candles(self, symbol, interval, limit, start_time=None, end_time=None):
         measurement = f"candles_{interval}"
         if start_time:
-            time_filter = f'  |> range(start: {start_time}ms'
+            time_filter = f'  |> range(start: {start_time-10}ms'
             if end_time:
-                time_filter += f', stop: {end_time}ms'
+                time_filter += f', stop: {end_time+10}ms'
             time_filter += ')'
         else:
             time_filter = '  |> range(start: -30d)'
@@ -71,7 +71,7 @@ class InfluxWriter:
         {time_filter}
           |> filter(fn: (r) => r["_measurement"] == "{measurement}" and r["symbol"] == "{symbol}")
           |> sort(columns: ["_time"], desc: true)
-          |> limit(n: {limit})
+          |> limit(n: {limit*5})
         '''
 
         tables = self.query_api.query(query)
