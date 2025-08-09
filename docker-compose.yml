@@ -28,9 +28,14 @@ services:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=my-secret-token
+      - INFLUX_ORG=Financial-Analytics
+      - INFLUX_BUCKET=PriceServiceDB
     depends_on:
       - kafka
       - redis
+      - influxdb
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 10s
@@ -176,3 +181,27 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_DELETE_TOPIC_ENABLE: 'true'
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "9090:8086"
+    volumes:
+      - ./influxdb:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminPassword
+      - DOCKER_INFLUXDB_INIT_ORG=Financial-Analytics
+      - DOCKER_INFLUXDB_INIT_BUCKET=PriceServiceDB
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-secret-token
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8086/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+
+

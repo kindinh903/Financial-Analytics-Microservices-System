@@ -29,7 +29,9 @@ class PriceService:
                 if (not start_time or c['close_time'] >= start_time)
                 and (not end_time or c['close_time'] <= end_time)
             ]
+
         print(f"[get_candles] Filtered Redis candles: {len(filtered)} items")
+        filtered = sorted(filtered, key=lambda x: x['close_time'], reverse=True)
 
         # Nếu đã đủ thì return luôn
         if len(filtered) >= limit:
@@ -89,7 +91,7 @@ class PriceService:
 
         while missing > 0 and attempts < max_attempts:
             # choose fetch_limit: try to fetch more than missing to account for overlaps
-            fetch_limit = max(missing * 2, missing)
+            fetch_limit = min(max(missing * 2, missing), 1000)
             print(f"[get_candles] Fetch attempt {attempts+1}: fetch_limit={fetch_limit}, end_time_fetch={end_time_fetch}, start_time={start_time}")
 
             if fetch_mode == "window":
