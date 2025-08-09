@@ -1,0 +1,12 @@
+##realtime
+GET http://localhost:8000/api/price/realtime?symbol=DOTUSDT 
+{}
+
+
+
+### candle
+GET http://localhost:8000/api/price/candles?symbol=DOTUSDT 
+
+
+### api candle full
+GET http://localhost:8000/api/price/candles?symbol=BTCUSDT&interval=5m&limit=20

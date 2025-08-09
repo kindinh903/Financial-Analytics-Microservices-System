@@ -18,18 +18,14 @@ async def startup():
         settings.INFLUX_BUCKET
     )
 
-    # Tạo WSManager mới
     app.state.ws_manager = WSManager()
-
-    # Start WebSocket cho từng symbol
-    for symbol in SYMBOL_WHITELIST:
-        stream = {"stream": f"{symbol.lower()}@kline_1m"}
-        app.state.ws_manager.start(stream)
+    app.state.ws_manager.start()  # start 1 WS kết nối duy nhất cho tất cả symbol
 
 @app.on_event("shutdown")
 async def shutdown():
     await redis_client.close()
     await influx_writer.close()
     app.state.ws_manager.stop()
+
 
 app.include_router(candles_router, prefix="/api")
