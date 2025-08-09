@@ -159,16 +159,26 @@ class PriceService:
 
 
     def _interval_to_milliseconds(self, interval: str) -> int:
-        unit = interval[-1]
-        amount = int(interval[:-1])
-        if unit == 'm':
-            return amount * 60 * 1000
-        elif unit == 'h':
-            return amount * 60 * 60 * 1000
-        elif unit == 'd':
-            return amount * 24 * 60 * 60 * 1000
-        else:
+        if not interval or len(interval) < 2:
             return 0
+
+        unit = interval[-1]
+        try:
+            amount = int(interval[:-1])
+        except ValueError:
+            return 0
+
+        unit_multipliers = {
+            'm': 60 * 1000,              # phút
+            'h': 60 * 60 * 1000,         # giờ
+            'd': 24 * 60 * 60 * 1000,    # ngày
+            'w': 7 * 24 * 60 * 60 * 1000, # tuần
+            'M': 30 * 24 * 60 * 60 * 1000,  # tháng (30 ngày)
+            'y': 365 * 24 * 60 * 60 * 1000, # năm (365 ngày)
+        }
+
+        return amount * unit_multipliers.get(unit, 0)
+
 
     async def save_candle(self, symbol: str, interval: str, candle: dict, persist_influx: bool = True):
         # store to Redis list and stream

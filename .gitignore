@@ -1,0 +1,2 @@
+# Ignore influxdb data folder
+/influxdb/
