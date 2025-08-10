@@ -4,6 +4,7 @@
 
 - **Frontend**: React (port 3000)
 - **API Gateway**: Spring Boot (port 8080)
+- **Auth Service**: Node.js + MongoDB (port 8087) - JWT Authentication
 - **Notification Service**: Go (port 8086)
 - **Price Service**: Go (port 8081)
 - **News Service**: Python Flask (port 8082)
@@ -12,6 +13,7 @@
 - **User Service**: Spring Boot (port 8085)
 - **Kafka**: (port 9092), **Zookeeper**: (port 2181)
 - **Redis**: (port 6379)
+- **MongoDB**: (port 27017)
 
 ## Chạy toàn bộ hệ thống
 
@@ -24,6 +26,15 @@ docker-compose up --build
 - Các service expose port riêng, healthcheck tại `/health`.
 
 ## Phát triển từng service
+
+### Auth Service (Node.js)
+```bash
+cd services/auth-service
+npm install
+cp env.example .env
+# Edit .env file with your configuration
+npm run dev
+```
 
 ### Notification, price Service (Go)
 ```bash
@@ -56,9 +67,10 @@ npm install
 npm start
 ```
 
-## Kết nối Kafka/Redis
+## Kết nối Kafka/Redis/MongoDB
 - Kafka broker: `kafka:9092`
 - Redis: `redis:6379`
+- MongoDB: `mongodb:27017`
 - Các service đã cấu hình sẵn biến môi trường để kết nối.
 
 ## Healthcheck

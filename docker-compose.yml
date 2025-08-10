@@ -1,6 +1,27 @@
 version: '3.9'
 
 services:
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    ports:
+      - "8087:8087"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/financial_analytics
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - JWT_REFRESH_SECRET=your-super-secret-refresh-jwt-key-change-this-in-production
+      - REDIS_URL=redis://redis:6379
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   notification-service:
     build: ./services/notification-service
     container_name: notification-service
@@ -141,6 +162,21 @@ services:
       timeout: 3s
       retries: 3
 
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: financial_analytics
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   redis:
     image: redis:7.2-alpine
     container_name: redis
@@ -176,3 +212,6 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_DELETE_TOPIC_ENABLE: 'true'
+
+volumes:
+  mongodb_data:
