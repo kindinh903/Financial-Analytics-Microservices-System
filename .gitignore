@@ -2,3 +2,5 @@
 /shelf/
 /workspace.xml
 .idea/
+# Ignore influxdb data folder
+/influxdb/
