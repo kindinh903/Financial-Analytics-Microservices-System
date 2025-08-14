@@ -7,6 +7,7 @@ from app.routes.api import router as api_router
 from app.routes.ws import router as ws_router
 from app.services.ws_manager import WSManager
 import logging
+import uvicorn
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,3 +34,11 @@ app = FastAPI(title="price-service", lifespan=lifespan)
 
 app.include_router(api_router, prefix="/api")
 app.include_router(ws_router)
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "OK", "service": "price-service"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8081)

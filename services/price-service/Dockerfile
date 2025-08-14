@@ -14,4 +14,4 @@ COPY . .
 ENV PYTHONPATH=/app/src
 
 # Chạy FastAPI bằng Uvicorn, chỉ định đúng module main
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8081", "--reload", "--root-path", "/api"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8081", "--reload"]

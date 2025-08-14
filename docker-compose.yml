@@ -4,8 +4,7 @@ services:
   auth-service:
     build: ./services/auth-service
     container_name: auth-service
-    ports:
-      - "8087:8087"
+    expose: ["8087"]         
     environment:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/financial_analytics
@@ -25,8 +24,7 @@ services:
   notification-service:
     build: ./services/notification-service
     container_name: notification-service
-    ports:
-      - "8086:8086"
+    expose: ["8086"]         
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -43,8 +41,7 @@ services:
   price-service:
     build: ./services/price-service
     container_name: price-service
-    ports:
-      - "8081:8081"
+    expose: ["8081"]         # ✅ Only internal access
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -66,8 +63,7 @@ services:
   news-service:
     build: ./services/news-service
     container_name: news-service
-    ports:
-      - "8082:8082"
+    expose: ["8082"]        
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -84,8 +80,7 @@ services:
   backtest-service:
     build: ./services/backtest-service
     container_name: backtest-service
-    ports:
-      - "8083:8083"
+    expose: ["8083"]         
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -102,8 +97,7 @@ services:
   ai-service:
     build: ./services/ai-service
     container_name: ai-service
-    ports:
-      - "8084:8084"
+    expose: ["8084"]         
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -120,8 +114,7 @@ services:
   user-service:
     build: ./services/user-service
     container_name: user-service
-    ports:
-      - "8085:8085"
+    expose: ["8085"]        
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -147,7 +140,8 @@ services:
     depends_on:
       - kafka
       - redis
-      - user-service
+      - auth-service
+      - price-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s

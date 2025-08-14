@@ -1,14 +1,14 @@
 ##realtime
-GET http://localhost:8081/api/price/realtime?symbol=DOTUSDT 
+GET http://localhost:8080/api/price/realtime?symbol=DOTUSDT 
 
 
 
 ### candle
-GET http://localhost:8081/api/price/candles?symbol=BTCUSDT 
+GET http://localhost:8080/api/price/candles?symbol=BTCUSDT 
 
 
 ### api candle full
-GET http://localhost:8081/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100
+GET http://localhost:8080/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100
 
 
     "BTCUSDT",

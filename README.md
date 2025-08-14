@@ -3,7 +3,7 @@
 ## Kiến trúc hệ thống
 
 - **Frontend**: React (port 3000)
-- **API Gateway**: Spring Boot (port 8080)
+- **API Gateway**: Spring Boot (port 8080) - **✅ Điểm vào duy nhất cho tất cả APIs**
 - **Auth Service**: Node.js + MongoDB (port 8087) - JWT Authentication
 - **Notification Service**: Go (port 8086)
 - **Price Service**: Go (port 8081)
@@ -22,8 +22,23 @@ docker-compose up --build
 ```
 
 - Truy cập frontend: http://localhost:3000
-- API Gateway: http://localhost:8080
-- Các service expose port riêng, healthcheck tại `/health`.
+- **API Gateway (duy nhất)**: http://localhost:8080
+- **Các services KHÔNG expose ports ra ngoài** - chỉ có thể truy cập qua Gateway
+- Healthcheck tại `/health` qua Gateway
+
+## API Endpoints qua Gateway
+
+Tất cả APIs phải được gọi qua Gateway:
+
+```bash
+# ❌ KHÔNG gọi trực tiếp services
+# curl http://localhost:8087/api/auth/login
+
+# ✅ Gọi qua Gateway
+curl http://localhost:8080/api/auth/login
+curl http://localhost:8080/api/price/candles?symbol=BTCUSDT
+curl http://localhost:8080/api/users/profile
+```
 
 ## Phát triển từng service
 
