@@ -1,107 +1,166 @@
-# Financial Analytics Microservices System
+# Financial Analytics Platform - Kafka Integration
 
-## Kiến trúc hệ thống
+Project này implement Kafka cho price service và tạo backtest service đơn giản bằng Go.
 
-- **Frontend**: React (port 3000)
-- **API Gateway**: Spring Boot (port 8080) - **✅ Điểm vào duy nhất cho tất cả APIs**
-- **Auth Service**: Node.js + MongoDB (port 8087) - JWT Authentication
-- **Notification Service**: Go (port 8086)
-- **Price Service**: Go (port 8081)
-- **News Service**: Python Flask (port 8082)
-- **Backtest Service**: Spring Boot (port 8083)
-- **AI Service**: Python FastAPI (port 8084)
-- **User Service**: Spring Boot (port 8085)
-- **Kafka**: (port 9092), **Zookeeper**: (port 2181)
-- **Redis**: (port 6379)
-- **MongoDB**: (port 27017)
+## Cấu trúc Project
 
-## Chạy toàn bộ hệ thống
-
-```bash
-docker-compose up --build
+```
+├── services/
+│   ├── price-service/          # Python FastAPI service với Kafka producer
+│   └── backtest-service/       # Go service với Kafka consumer
+├── docker-compose.yml          # Docker compose để chạy toàn bộ hệ thống
+├── test-kafka.py              # Script test Kafka
+└── README.md                  # File này
 ```
 
-- Truy cập frontend: http://localhost:3000
-- **API Gateway (duy nhất)**: http://localhost:8080
-- **Các services KHÔNG expose ports ra ngoài** - chỉ có thể truy cập qua Gateway
-- Healthcheck tại `/health` qua Gateway
+## Services
 
-## API Endpoints qua Gateway
+### Price Service (Python)
+- **Port**: 8081
+- **Chức năng**: 
+  - Nhận real-time price data từ Binance WebSocket
+  - Lưu trữ vào Redis và InfluxDB
+  - Gửi price updates đến Kafka topic `price-updates`
+- **Kafka**: Producer gửi price updates
 
-Tất cả APIs phải được gọi qua Gateway:
+### Backtest Service (Go)
+- **Port**: 8082
+- **Chức năng**:
+  - Nhận price updates từ Kafka
+  - Log và thống kê các message nhận được
+  - HTTP API để xem statistics
+- **Kafka**: Consumer nhận price updates
 
+## Cách chạy
+
+### 1. Khởi động toàn bộ hệ thống
 ```bash
-# ❌ KHÔNG gọi trực tiếp services
-# curl http://localhost:8087/api/auth/login
-
-# ✅ Gọi qua Gateway
-curl http://localhost:8080/api/auth/login
-curl http://localhost:8080/api/price/candles?symbol=BTCUSDT
-curl http://localhost:8080/api/users/profile
+docker-compose up -d
 ```
 
-## Phát triển từng service
-
-### Auth Service (Node.js)
+### 2. Kiểm tra services
 ```bash
-cd services/auth-service
-npm install
-cp env.example .env
-# Edit .env file with your configuration
-npm run dev
+# Kiểm tra price service
+curl http://localhost:8081/health
+
+# Kiểm tra backtest service
+curl http://localhost:8082/health
+
+# Xem statistics của backtest service
+curl http://localhost:8082/stats
 ```
 
-### Notification, price Service (Go)
+### 3. Test Kafka (tùy chọn)
 ```bash
-cd services/notification-service # hoặc price-service
+# Cài đặt dependencies
+pip install aiokafka
+
+# Chạy test script
+python test-kafka.py
+```
+
+## Kafka Configuration
+
+### Topic
+- **Name**: `price-updates`
+- **Partitions**: 1 (mặc định)
+- **Replication**: 1 (development)
+
+### Message Format
+```json
+{
+  "symbol": "BTCUSDT",
+  "price": 50000.0,
+  "timestamp": 1640995200000,
+  "volume": 100.5,
+  "service": "price-service"
+}
+```
+
+## API Endpoints
+
+### Price Service
+- `GET /health` - Health check
+- `GET /api/prices/{symbol}` - Get current price
+- `GET /api/candles/{symbol}/{interval}` - Get historical candles
+- `WS /ws/prices` - WebSocket for real-time prices
+
+### Backtest Service
+- `GET /health` - Health check
+- `GET /stats` - Get message statistics
+
+## Monitoring
+
+### Logs
+```bash
+# Xem logs price service
+docker-compose logs -f price-service
+
+# Xem logs backtest service
+docker-compose logs -f backtest-service
+
+# Xem logs Kafka
+docker-compose logs -f kafka
+```
+
+### Kafka Topics
+```bash
+# Vào Kafka container
+docker exec -it kafka bash
+
+# List topics
+kafka-topics --bootstrap-server localhost:9092 --list
+
+# Describe topic
+kafka-topics --bootstrap-server localhost:9092 --describe --topic price-updates
+```
+
+## Development
+
+### Price Service
+```bash
+cd services/price-service
+pip install -r requirements.txt
+python src/app/main.py
+```
+
+### Backtest Service
+```bash
+cd services/backtest-service
 go mod tidy
 go run main.go
 ```
 
-### News, ai Service (Py)
-```bash
-cd services/news-service # hoặc ai-service
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-python app.py
-```
+## Troubleshooting
 
-### Backtest, user, gateway (Java Spring Boot Service )
-```bash
-cd services/backtest-service # hoặc user-service, gateway
-./mvnw spring-boot:run
-# hoặc build jar:
-mvn clean package
-java -jar target/*.jar
-```
+### Kafka không kết nối được
+1. Kiểm tra Kafka đã start chưa: `docker-compose ps`
+2. Kiểm tra logs: `docker-compose logs kafka`
+3. Đảm bảo Zookeeper đã start trước Kafka
 
-### Frontend (react)
-```bash
-cd frontend
-npm install
-npm start
-```
+### Services không nhận được messages
+1. Kiểm tra topic đã tạo chưa
+2. Kiểm tra consumer group
+3. Xem logs của từng service
 
-## Kết nối Kafka/Redis/MongoDB
-- Kafka broker: `kafka:9092`
-- Redis: `redis:6379`
-- MongoDB: `mongodb:27017`
-- Các service đã cấu hình sẵn biến môi trường để kết nối.
+### Port conflicts
+- Đảm bảo ports 8081, 8082, 9092, 6379, 8086 không bị sử dụng
+- Hoặc thay đổi ports trong docker-compose.yml
 
-## Healthcheck
-- Mỗi service expose endpoint `/health` trả về `OK`.
+## Mở rộng
 
-## Lưu ý
-- Mỗi service có Dockerfile riêng, build độc lập.
-- Khi phát triển, có thể chỉ chạy từng service và Kafka/Redis bằng docker-compose:
-  ```bash
-  docker-compose up kafka redis
-  # hoặc chỉ service cần thiết
-  ```
-- Đảm bảo Kafka/Zookeeper và Redis đã chạy trước khi test các service phụ thuộc.
+### Thêm Backtest Logic
+1. Tạo struct cho historical data trong `main.go`
+2. Implement indicators (MA, RSI, etc.)
+3. Thêm trading strategies
+4. Tạo endpoints để query backtest results
 
-## Thư mục
-- `services/`: Chứa các microservice
-- `gateway/`: API Gateway
-- `frontend/`: React app
-- `infra/`: Hạ tầng Kafka, Redis
+### Thêm Services
+1. Tạo service mới trong `services/`
+2. Thêm vào `docker-compose.yml`
+3. Implement Kafka consumer/producer tương ứng
+
+### Monitoring
+1. Thêm Prometheus metrics
+2. Tạo Grafana dashboards
+3. Implement alerting

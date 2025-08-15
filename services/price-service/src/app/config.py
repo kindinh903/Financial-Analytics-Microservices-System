@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     BINANCE_REST_BASE: str = "https://api.binance.com/api/v3"
     BINANCE_WS_BASE: str = "wss://stream.binance.com:9443"
     CANDLES_LIST_MAX: int = 1000
-
+    
+    KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"
+    KAFKA_PRICE_TOPIC: str = "price-updates"
+    KAFKA_GROUP_ID: str = "price-service-group"
 
 
 settings = Settings()

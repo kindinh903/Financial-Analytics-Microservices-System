@@ -50,6 +50,7 @@ services:
       - INFLUX_TOKEN=my-secret-token
       - INFLUX_ORG=Financial-Analytics
       - INFLUX_BUCKET=PriceServiceDB
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       - kafka
       - redis
@@ -63,24 +64,7 @@ services:
   news-service:
     build: ./services/news-service
     container_name: news-service
-    expose: ["8082"]        
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-  backtest-service:
-    build: ./services/backtest-service
-    container_name: backtest-service
-    expose: ["8083"]         
+    expose: ["8083"]        # Changed from 8082 to avoid conflict
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -90,6 +74,24 @@ services:
       - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  backtest-service:
+    build: ./services/backtest-service
+    container_name: backtest-service
+    expose: ["8082"]         # Backtest service uses port 8082
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - kafka
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -207,10 +209,16 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_DELETE_TOPIC_ENABLE: 'true'
+    volumes:
+      - kafka-data:/var/lib/kafka/data
 
   influxdb:
     image: influxdb:2.7
@@ -233,9 +241,6 @@ services:
       timeout: 3s
       retries: 3
 
-
-
-
-
 volumes:
   mongodb_data:
+  kafka-data:

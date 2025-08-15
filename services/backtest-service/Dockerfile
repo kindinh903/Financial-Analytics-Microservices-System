@@ -1,11 +1,32 @@
-FROM maven:3.9.6-eclipse-temurin-17 AS build
-WORKDIR /app
-COPY . .
-RUN mvn clean package -DskipTests
+# Build stage
+FROM golang:1.21-alpine AS builder
 
-FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/backtest-service-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8083
-HEALTHCHECK --interval=10s --timeout=3s CMD curl -f http://localhost:8083/actuator/health || exit 1
-ENTRYPOINT ["java", "-jar", "app.jar"] 
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o backtest-service .
+
+# Final stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the binary from builder stage
+COPY --from=builder /app/backtest-service .
+
+# Expose port
+EXPOSE 8082
+
+# Run the binary
+CMD ["./backtest-service"] 

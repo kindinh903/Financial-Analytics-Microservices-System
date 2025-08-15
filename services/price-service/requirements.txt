@@ -26,3 +26,6 @@ pydantic>=2.7.0
 pydantic-settings>=2.0.0
 
 websockets==11.0.3
+
+# Kafka
+aiokafka==0.12.0
