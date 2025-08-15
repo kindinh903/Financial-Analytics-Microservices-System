@@ -2,8 +2,6 @@ module backtest-service
 
 go 1.23
 
-toolchain go1.24.2
-
 require (
 	github.com/Shopify/sarama v1.38.1
 	github.com/gin-gonic/gin v1.9.1
@@ -54,3 +52,4 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+ 

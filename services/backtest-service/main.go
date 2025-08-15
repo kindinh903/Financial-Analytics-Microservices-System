@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/gin-gonic/gin"
@@ -114,7 +112,7 @@ func main() {
 	backtestService := NewBacktestService()
 
 	// Kafka configuration
-	kafkaBrokers := []string{"kafka:9092"}
+	kafkaBrokers := []string{"kafka:29092"}
 	kafkaTopic := "price-updates"
 
 	// Start Kafka consumer
