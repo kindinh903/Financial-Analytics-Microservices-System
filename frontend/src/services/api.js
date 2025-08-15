@@ -1,0 +1,118 @@
+import axios from 'axios';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Add auth token if available
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Handle unauthorized access
+      localStorage.removeItem('authToken');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Health check endpoints
+export const healthCheck = {
+  gateway: () => api.get('/health'),
+  auth: () => api.get('/api/auth/health'),
+  price: () => api.get('/api/price/health'),
+  news: () => api.get('/api/news/health'),
+  user: () => api.get('/api/user/health'),
+};
+
+// Price service endpoints
+export const priceService = {
+  // Get historical price data
+  getHistoricalData: (symbol, timeframe, limit = 100) =>
+    api.get(`/api/price/historical/${symbol}`, {
+      params: { timeframe, limit },
+    }),
+
+  // Get real-time price
+  getRealTimePrice: (symbol) =>
+    api.get(`/api/price/realtime/${symbol}`),
+
+  // Get price summary
+  getPriceSummary: (symbol) =>
+    api.get(`/api/price/summary/${symbol}`),
+
+  // Get available symbols
+  getAvailableSymbols: () =>
+    api.get('/api/price/symbols'),
+
+  // Get market overview
+  getMarketOverview: () =>
+    api.get('/api/price/market-overview'),
+};
+
+// Auth service endpoints
+export const authService = {
+  login: (credentials) =>
+    api.post('/api/auth/login', credentials),
+
+  register: (userData) =>
+    api.post('/api/auth/register', userData),
+
+  refreshToken: (refreshToken) =>
+    api.post('/api/auth/refresh', { refreshToken }),
+
+  logout: () =>
+    api.post('/api/auth/logout'),
+};
+
+// User service endpoints
+export const userService = {
+  getProfile: () =>
+    api.get('/api/user/profile'),
+
+  updateProfile: (profileData) =>
+    api.put('/api/user/profile', profileData),
+
+  getPortfolio: () =>
+    api.get('/api/user/portfolio'),
+
+  addToPortfolio: (portfolioItem) =>
+    api.post('/api/user/portfolio', portfolioItem),
+};
+
+// News service endpoints
+export const newsService = {
+  getNews: (params = {}) =>
+    api.get('/api/news', { params }),
+
+  getNewsBySymbol: (symbol) =>
+    api.get(`/api/news/symbol/${symbol}`),
+
+  getNewsCategories: () =>
+    api.get('/api/news/categories'),
+};
+
+export default api; 
