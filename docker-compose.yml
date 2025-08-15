@@ -41,7 +41,7 @@ services:
   price-service:
     build: ./services/price-service
     container_name: price-service
-    expose: ["8081"]         # ✅ Only internal access
+    expose: ["8081"]         
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
