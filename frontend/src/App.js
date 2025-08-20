@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
+import TradingInterface from './pages/TradingInterface ';
 import Dashboard from './pages/Dashboard';
 import Charts from './pages/Charts';
 import Portfolio from './pages/Portfolio';
@@ -9,14 +10,13 @@ import News from './pages/News';
 function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/charts" element={<Charts />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/news" element={<News />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/" element={<TradingInterface />} />
+        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+        <Route path="/charts" element={<Layout><Charts /></Layout>} />
+        <Route path="/portfolio" element={<Layout><Portfolio /></Layout>} />
+        <Route path="/news" element={<Layout><News /></Layout>} />
+      </Routes>
     </Router>
   );
 }

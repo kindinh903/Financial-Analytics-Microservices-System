@@ -1,139 +1,103 @@
-# Financial Analytics Frontend
+# Frontend Trading Platform
 
-A modern React SPA (Single Page Application) for financial analytics with TradingView charts, portfolio management, and market insights.
+## Mô tả
+Ứng dụng web trading platform với giao diện hiện đại, tích hợp TradingView charts và các tính năng phân tích thị trường.
 
-## Features
+## Tính năng chính
 
-- 📊 **Dashboard**: Overview of services status and market data
-- 📈 **Charts**: Advanced TradingView charts with multiple timeframes
-- 💼 **Portfolio**: Investment tracking and management
-- 📰 **News**: Financial news with category filtering
-- 🔐 **Authentication**: JWT-based authentication system
-- 📱 **Responsive**: Mobile-friendly design with Tailwind CSS
+### 🚀 TradingInterface (Trang chính)
+- **Biểu đồ giao dịch**: Tích hợp TradingView Widget với các chỉ số kỹ thuật
+- **Danh sách theo dõi**: Theo dõi các cặp tiền điện tử phổ biến
+- **Phân tích kỹ thuật**: RSI, MACD, Support/Resistance levels
+- **Tin tức thị trường**: Cập nhật tin tức và phân tích thị trường real-time
+- **Navigation**: Điều hướng dễ dàng giữa các trang
 
-## Tech Stack
+### 📊 Các trang khác
+- **Dashboard**: Tổng quan thị trường
+- **Charts**: Biểu đồ chi tiết
+- **Portfolio**: Quản lý danh mục đầu tư
+- **News**: Tin tức tài chính
 
-- **React 18** - Modern React with hooks
-- **React Router 6** - Client-side routing
-- **Tailwind CSS** - Utility-first CSS framework
-- **react-tradingview-widget** - Official TradingView charts
-- **Axios** - HTTP client for API calls
-- **Docker** - Containerization
+## Cài đặt và chạy
 
-## Prerequisites
+### Yêu cầu hệ thống
+- Node.js 16+ 
+- npm hoặc yarn
 
-- Node.js 18+ 
-- npm or yarn
-- Docker (for containerized deployment)
-
-## Quick Start
-
-### Development Mode
-
-1. Install dependencies:
+### Cài đặt dependencies
 ```bash
 npm install
 ```
 
-2. Start development server:
+### Chạy ứng dụng
 ```bash
 npm start
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+Ứng dụng sẽ chạy tại: http://localhost:3000
 
-### Production Build
-
-1. Build the application:
+### Build production
 ```bash
 npm run build
 ```
 
-2. The built files will be in the `build/` directory.
-
-### Docker Deployment
-
-1. Build the Docker image:
-```bash
-docker build -t financial-analytics-frontend .
-```
-
-2. Run the container:
-```bash
-docker run -p 3000:80 financial-analytics-frontend
-```
-
-## Project Structure
+## Cấu trúc dự án
 
 ```
 src/
-├── components/          # Reusable UI components
-│   ├── Layout/         # Layout components (Header, Layout)
-│   └── Charts/         # Chart components (TradingViewChart)
-├── pages/              # Page components
-│   ├── Dashboard.js    # Main dashboard
-│   ├── Charts.js       # Trading charts
-│   ├── Portfolio.js    # Portfolio management
-│   └── News.js         # Financial news
-├── services/           # API services
-│   └── api.js         # API client and endpoints
-├── App.js             # Main app component with routing
-└── index.js           # Entry point
+├── components/          # Các component tái sử dụng
+│   └── Layout/         # Layout chính của ứng dụng
+├── pages/              # Các trang của ứng dụng
+│   ├── TradingInterface.js  # Trang chính - Giao diện giao dịch
+│   ├── Dashboard.js         # Trang tổng quan
+│   ├── Charts.js            # Trang biểu đồ
+│   ├── Portfolio.js         # Trang danh mục
+│   └── News.js              # Trang tin tức
+├── services/            # API services
+├── App.js              # Component chính
+└── index.js            # Entry point
 ```
 
-## API Integration
+## Dependencies chính
 
-The frontend communicates with backend services through a gateway:
+- **React 18**: Framework UI
+- **React Router**: Điều hướng
+- **TradingView Widget**: Biểu đồ giao dịch chuyên nghiệp
+- **Tailwind CSS**: Styling framework
+- **Axios**: HTTP client
 
-- **Gateway**: `http://localhost:8080`
-- **Price Service**: `/api/price/*`
-- **Auth Service**: `/api/auth/*`
-- **User Service**: `/api/user/*`
-- **News Service**: `/api/news/*`
+## Tính năng TradingInterface
 
-## Environment Variables
+### 1. Header Navigation
+- Logo và tên ứng dụng
+- Menu điều hướng chính
+- Icons thông báo, cài đặt, người dùng
 
-Create a `.env` file in the root directory:
+### 2. Sidebar trái
+- Danh sách theo dõi các cặp tiền
+- Công cụ phân tích kỹ thuật
+- Chọn cặp tiền để hiển thị
 
-```env
-REACT_APP_API_URL=http://localhost:8080
-```
+### 3. Khu vực biểu đồ chính
+- TradingView Widget tích hợp
+- Thông tin giá real-time
+- Các chỉ số kỹ thuật cơ bản
 
-## Available Scripts
+### 4. Sidebar phải
+- Tin tức thị trường trending
+- Phân tích kỹ thuật
+- Cảnh báo và thông tin rủi ro
 
-- `npm start` - Start development server
-- `npm run build` - Build for production
-- `npm test` - Run tests
-- `npm run eject` - Eject from Create React App
+## Lưu ý
 
-## Features in Detail
+- TradingView Widget yêu cầu kết nối internet để hoạt động
+- Các dữ liệu giá và tin tức là demo, không phải dữ liệu thực
+- Ứng dụng được thiết kế cho mục đích học tập và demo
 
-### TradingView Charts
-- Multiple timeframes (1H, 4H, 1D, 1W, 1M)
-- Technical indicators (RSI, MACD, Bollinger Bands)
-- Symbol search and switching
-- Responsive design
+## Hỗ trợ
 
-### Portfolio Management
-- Asset tracking
-- Performance metrics
-- Add/edit/remove holdings
-- Real-time price updates
-
-### News Dashboard
-- Category filtering
-- Sentiment analysis
-- Source attribution
-- Responsive grid layout
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License. 
+Nếu gặp vấn đề, vui lòng kiểm tra:
+1. Node.js version
+2. Dependencies đã được cài đặt đầy đủ
+3. Kết nối internet
+4. Console errors trong browser 

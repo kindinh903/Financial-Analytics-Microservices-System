@@ -4,3 +4,4 @@
 .idea/
 # Ignore influxdb data folder
 /influxdb/
+node_modules/
