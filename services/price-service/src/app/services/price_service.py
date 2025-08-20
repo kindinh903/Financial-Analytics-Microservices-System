@@ -4,8 +4,8 @@
 from typing import List, Optional
 from app.storage.redis_client import redis_client
 from app.storage.influx_client import influx_writer
-from app.utils.binance_api import fetch_klines
-from app.config import settings
+from app.utils.binance_api import fetch_klines, fetch_market_snapshot, fetch_top_movers
+from app.config import settings, SYMBOL_WHITELIST
 
 class PriceService:
     def __init__(self):
@@ -155,6 +155,36 @@ class PriceService:
         final_list = sorted(combined.values(), key=lambda x: x['close_time'], reverse=True)
         print(f"[get_candles] Final merged list: {len(final_list)} items (returning up to {limit})")
         return final_list[:limit]
+
+
+    async def get_market_snapshot(self, symbol_list: list[str]):
+        """
+        Lấy snapshot cho nhiều cặp coin, nhưng chỉ lấy các symbol nằm trong SYMBOL_WHITELIST
+        """
+        # lọc chỉ lấy các symbol hợp lệ
+        filtered_symbols = [s for s in symbol_list if s in SYMBOL_WHITELIST]
+
+        if not filtered_symbols:
+            return []
+
+        # gọi tới Binance API để lấy dữ liệu snapshot
+        data = await fetch_market_snapshot(filtered_symbols)
+        return data
+
+    async def get_top_movers(self, limit: int = 10):
+        """
+        Lấy top gainers và losers (24h) nhưng chỉ cho các symbol trong SYMBOL_WHITELIST
+        """
+        data = await fetch_top_movers(limit)
+
+        # Lọc lại gainers và losers theo SYMBOL_WHITELIST
+        gainers = [item for item in data["top_gainers"] if item["symbol"] in SYMBOL_WHITELIST]
+        losers = [item for item in data["top_losers"] if item["symbol"] in SYMBOL_WHITELIST]
+
+        return {
+            "top_gainers": gainers,
+            "top_losers": losers
+        }
 
 
 

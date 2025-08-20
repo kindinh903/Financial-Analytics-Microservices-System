@@ -1,14 +1,27 @@
-##realtime
-GET http://localhost:8080/api/price/realtime?symbol=DOTUSDT 
+### =======================
+### Price Service API Test
+### =======================
 
+### Get realtime price
+GET http://localhost:8081/api/price/realtime?symbol=DOTUSDT
 
+### Get candles (default 1m, limit=500)
+GET http://localhost:8081/api/price/candles?symbol=BTCUSDT
 
-### candle
-GET http://localhost:8080/api/price/candles?symbol=BTCUSDT 
+### Get candles (full params)
+GET http://localhost:8081/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100&start_time=1710000000000&end_time=1710100000000
 
+### Get supported symbols
+GET http://localhost:8081/api/price/symbol
 
-### api candle full
-GET http://localhost:8080/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100
+### Get history (1D interval)
+GET http://localhost:8081/api/price/history?symbol=ETHUSDT&interval=1d&limit=30
+
+### Market snapshot (multiple symbols)
+GET http://localhost:8081/api/price/market_snapshot?symbols=BTCUSDT,ETHUSDT,SOLUSDT
+
+### Top movers (gainers & losers)
+GET http://localhost:8081/api/price/top_movers?limit=5
 
 
     "BTCUSDT",
