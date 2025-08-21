@@ -6,10 +6,10 @@
 GET http://localhost:8081/api/price/realtime?symbol=DOTUSDT
 
 ### Get candles (default 1m, limit=500)
-GET http://localhost:8081/api/price/candles?symbol=BTCUSDT
+GET http://localhost:8081/api/price/candles?limit=1000&symbol=SOLUSDT
 
 ### Get candles (full params)
-GET http://localhost:8081/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100&start_time=1710000000000&end_time=1710100000000
+GET http://localhost:8081/api/price/candles?symbol=ADAUSDT&interval=1m&limit=1000&start_time=1710000000000&end_time=1710100000000
 
 ### Get supported symbols
 GET http://localhost:8081/api/price/symbol
