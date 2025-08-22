@@ -2,8 +2,8 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    REDIS_URL: str = "redis://localhost:6379/0"
-    INFLUX_URL: str = "http://localhost:9090"
+    REDIS_URL: str = "redis://redis:6379/0"
+    INFLUX_URL: str = "http://influxdb:8086"
     INFLUX_TOKEN: str = "my-secret-token"
     INFLUX_ORG: str = "Financial-Analytics"
     INFLUX_BUCKET: str = "PriceServiceDB"

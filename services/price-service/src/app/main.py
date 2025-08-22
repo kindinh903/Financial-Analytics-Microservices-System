@@ -6,7 +6,7 @@ from app.storage.influx_client import influx_writer
 from app.routes.api import router as api_router
 from app.routes.ws import router as ws_router
 from app.services.ws_manager import WSManager
-# from app.services.kafka_producer import kafka_producer
+from app.services.kafka_producer import kafka_producer
 import logging
 import uvicorn
 
@@ -24,13 +24,13 @@ async def lifespan(app: FastAPI):
         settings.INFLUX_ORG,
         settings.INFLUX_BUCKET
     )
-    # await kafka_producer.start()
+    await kafka_producer.start()
     app.state.ws_manager = WSManager(intervals=INTERVALS)
     app.state.ws_manager.start_all()
     yield
     await redis_client.close()
     await influx_writer.close()
-    # await kafka_producer.stop()
+    await kafka_producer.stop()
     app.state.ws_manager.stop_all()
 
 app = FastAPI(title="price-service", lifespan=lifespan)

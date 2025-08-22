@@ -9,6 +9,24 @@ from app.storage.influx_client import influx_writer
 from app.config import SYMBOL_WHITELIST
 
 router = APIRouter()
+# sửa các giá trị dưới đây trong file config
+# SYMBOL_WHITELIST = [
+#     "BTCUSDT",
+#     "ETHUSDT",
+#     "BNBUSDT",
+#     "SOLUSDT",
+#     "ADAUSDT",
+#     "XRPUSDT",
+#     "DOGEUSDT",
+#     "DOTUSDT",
+#     "LTCUSDT"
+# ]
+
+# INTERVALS = [
+#     "1m", "3m", "5m", "15m", "30m",
+#     "1h", "2h", "4h", "6h", "8h", "12h",
+#     "1d", "3d", "1w", "1M"
+# ]
 
 #api lấy lịch sử của nến theo symbol , interval, limit, start time, end time.
 @router.get('/price/candles')

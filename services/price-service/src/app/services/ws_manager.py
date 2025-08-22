@@ -9,7 +9,7 @@ from app.storage.influx_client import influx_writer
 from app.services.broadcast import price_stream, candle_stream, market_snapshot_stream, top_movers_stream
 from app.services.price_service import price_service
 
-# from app.services.kafka_producer import kafka_producer
+from app.services.kafka_producer import kafka_producer
 
 
 logger = logging.getLogger(__name__)
@@ -70,15 +70,15 @@ class WSManager:
                                     }
                                     await price_stream.broadcast(price_update)
                                     
-                                    # # Gửi price update đến Kafka
-                                    # await kafka_producer.send_price_update(
-                                    #     candle['symbol'],
-                                    #     {
-                                    #         "price": candle['close'],
-                                    #         "timestamp": candle['close_time'],
-                                    #         "volume": candle['volume']
-                                    #     }
-                                    # )
+                                    # Gửi price update đến Kafka
+                                    await kafka_producer.send_price_update(
+                                        candle['symbol'],
+                                        {
+                                            "price": candle['close'],
+                                            "timestamp": candle['close_time'],
+                                            "volume": candle['volume']
+                                        }
+                                    )
 
                                 # Nếu nến đóng (x=True)
                                 if k['x'] is True:
