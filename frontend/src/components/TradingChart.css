@@ -1,0 +1,274 @@
+.trading-chart-container {
+  background: #1e222d;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #2B2B43;
+}
+
+.symbol-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.symbol {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #d1d4dc;
+}
+
+.price-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.price {
+  font-size: 20px;
+  font-weight: 600;
+  color: #d1d4dc;
+}
+
+.price-change {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.price-change.positive {
+  color: #26a69a;
+  background: rgba(38, 166, 154, 0.1);
+}
+
+.price-change.negative {
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.1);
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.connected {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.status-dot.disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.interval-selector select {
+  background: #2B2B43;
+  border: 1px solid #4b5563;
+  color: #d1d4dc;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.interval-selector select:hover {
+  border-color: #6b7280;
+}
+
+.interval-selector select:focus {
+  border-color: #3b82f6;
+}
+
+.chart-wrapper {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.loading-overlay,
+.error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 34, 45, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10;
+  color: #d1d4dc;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #2B2B43;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 16px;
+  text-align: center;
+}
+
+.retry-button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background: #2563eb;
+}
+
+.chart-container {
+  width: 100%;
+  background: #1e222d;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #2B2B43;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-color.positive {
+  background: #26a69a;
+}
+
+.legend-color.negative {
+  background: #ef5350;
+}
+
+.legend-color.volume {
+  background: #3b82f6;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .trading-chart-container {
+    padding: 12px;
+  }
+  
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .chart-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .symbol {
+    font-size: 20px;
+  }
+  
+  .price {
+    font-size: 18px;
+  }
+  
+  .chart-legend {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+
+/* Dark theme specific styles */
+.trading-chart-container {
+  color-scheme: dark;
+}
+
+/* Chart tooltip customization */
+.lightweight-charts-tooltip {
+  background: #2B2B43 !important;
+  border: 1px solid #4b5563 !important;
+  border-radius: 6px !important;
+  color: #d1d4dc !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 12px !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Scrollbar customization */
+.chart-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.chart-container::-webkit-scrollbar-track {
+  background: #2B2B43;
+}
+
+.chart-container::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.chart-container::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}

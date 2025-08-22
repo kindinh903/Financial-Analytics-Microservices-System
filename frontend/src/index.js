@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 function App() {
@@ -7,7 +6,7 @@ function App() {
       .then(res => res.text())
       .then(console.log);
   }, []);
-  return <div>Financial Analytics Frontend</div>;
+  return <div>Financial Analytics Frontends</div>;
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

@@ -162,7 +162,7 @@ services:
     depends_on:
       - gateway
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
       interval: 10s
       timeout: 3s
       retries: 3

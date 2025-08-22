@@ -9,30 +9,58 @@ spring:
     gateway:
       routes:
         - id: user-service
-          uri: http://user-service:8081
+          uri: http://user-service:8085
           predicates:
             - Path=/api/users/**
           filters:
             - StripPrefix=1
 
         - id: notification-service
-          uri: http://notification-service:8082
+          uri: http://notification-service:8086
           predicates:
             - Path=/api/notifications/**
           filters:
             - StripPrefix=1
 
         - id: price-service
-          uri: http://price-service:8086
+          uri: http://price-service:8081
           predicates:
             - Path=/api/price/**
           filters:
             - StripPrefix=1
 
         - id: price-ws
-          uri: ws://price-service:8086
+          uri: ws://price-service:8081
           predicates:
             - Path=/ws/price/**
+
+        - id: auth-service
+          uri: http://auth-service:8087
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+
+        - id: news-service
+          uri: http://news-service:8082
+          predicates:
+            - Path=/api/news/**
+          filters:
+            - StripPrefix=1
+
+        - id: ai-service
+          uri: http://ai-service:8084
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+
+        - id: backtest-service
+          uri: http://backtest-service:8083
+          predicates:
+            - Path=/api/backtest/**
+          filters:
+            - StripPrefix=1
 
 management:
   endpoints:
