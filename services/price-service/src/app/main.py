@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
         settings.INFLUX_BUCKET
     )
     # await kafka_producer.start()
-    app.state.ws_manager = WSManager(intervals=["1m", "5m", "15m", "1h", "5h"])
+    app.state.ws_manager = WSManager(intervals=INTERVALS)
     app.state.ws_manager.start_all()
     yield
     await redis_client.close()

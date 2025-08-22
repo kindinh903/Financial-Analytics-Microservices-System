@@ -56,6 +56,41 @@ class InfluxWriter:
         points = [self._point_from_candle(c) for c in candles]
         self.write_api.write(bucket=self.bucket, org=self.org, record=points)
 
+    async def query_candles_from_DB(self, symbol, interval, limit, start_time=None, end_time=None):
+        measurement = f"candles_{interval}"
+        if start_time:
+            time_filter = f'  |> range(start: {start_time-10}ms'
+            if end_time:
+                time_filter += f', stop: {end_time+10}ms'
+            time_filter += ')'
+        else:
+            time_filter = '  |> range(start: -30d)'
+
+        query = f'''
+        from(bucket: "{self.bucket}")
+        {time_filter}
+          |> filter(fn: (r) => r["_measurement"] == "{measurement}" and r["symbol"] == "{symbol}")
+          |> sort(columns: ["_time"], desc: true)
+        '''
+
+        tables = self.query_api.query(query)
+
+        candles = {}
+        for table in tables:
+            for row in table.records:
+                ts = int(row['_time'].timestamp() * 1000)
+                if ts not in candles:
+                    candles[ts] = {
+                        'symbol': row['symbol'],
+                        'interval': interval,
+                        'close_time': ts
+                    }
+                candles[ts][row['_field']] = row['_value']
+
+        results = list(candles.values())
+        results.sort(key=lambda c: c['close_time'], reverse=True)
+        return results[:limit]
+
     async def query_candles(self, symbol, interval, limit, start_time=None, end_time=None):
         measurement = f"candles_{interval}"
         if start_time:
@@ -91,6 +126,5 @@ class InfluxWriter:
         results = list(candles.values())
         results.sort(key=lambda c: c['close_time'], reverse=True)
         return results[:limit]
-
 
 influx_writer = InfluxWriter()

@@ -5,11 +5,12 @@
 from fastapi import APIRouter, Query
 from typing import Optional
 from app.services.price_service import price_service
+from app.storage.influx_client import influx_writer
 from app.config import SYMBOL_WHITELIST
 
 router = APIRouter()
 
-#api lấy thông tin của nến
+#api lấy lịch sử của nến theo symbol , interval, limit, start time, end time.
 @router.get('/price/candles')
 async def get_candles(symbol: str, interval: str = '1m', limit: int = Query(500, le=1000), start_time: Optional[int] = None, end_time: Optional[int] = None):
     res = await price_service.get_candles(symbol, interval, limit=limit, start_time=start_time, end_time=end_time)
@@ -30,11 +31,17 @@ async def get_symbols():
 
 # ========== API MỚI ==========
 
-# 1. Lấy dữ liệu lịch sử (1D, 1W, 1M) để vẽ chart lớn
-@router.get("/price/history")
-async def get_history(symbol: str, interval: str = "1d", limit: int = Query(500, le=1000), start_time: Optional[int] = None, end_time: Optional[int] = None):
-    res = await price_service.get_history(symbol, interval, limit=limit, start_time=start_time, end_time=end_time)
-    return {"data": res}
+# 1. API chỉ lấy giá trị nến từ database (dùng để train AI)
+# Không nên dùng vì thường không đủ dữ liệu
+#NÊN SỬ DỤNG /price/candle THAY THẾ
+# Lưu ý: Nếu service shutdown trước đó (dữ liệu có thể bị thiếu). Đã xử lý fill dữ liệu mỗi lần khởi động nhưng chưa hồi phục dữ liệu bị mất trước đó
+# DB có thể không đủ dữ liệu 
+
+# @router.get("/price/history")
+# async def get_history(symbol: str, interval: str = "1d", start_time: Optional[int] = None, end_time: Optional[int] = None):
+#     res = await influx_writer.query_candles_from_DB(symbol, interval, start_time=start_time, end_time=end_time, limit=None)
+#     return {"data": res}
+
 
 # 2. Snapshot nhiều cặp coin (so sánh % thay đổi, giá, volume)
 @router.get("/price/market_snapshot")

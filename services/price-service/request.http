@@ -9,13 +9,13 @@ GET http://localhost:8081/api/price/realtime?symbol=DOTUSDT
 GET http://localhost:8081/api/price/candles?limit=50&symbol=SOLUSDT
 
 ### Get candles (full params)
-GET http://localhost:8081/api/price/candles?symbol=ADAUSDT&interval=1m&limit=1000&start_time=1710000000000&end_time=1710100000000
+GET http://localhost:8081/api/price/candles?symbol=ADAUSDT&interval=15m&limit=1000&start_time=1710000000000&end_time=1710100000000
 
 ### Get supported symbols
 GET http://localhost:8081/api/price/symbol
 
 ### Get history (1D interval)
-GET http://localhost:8081/api/price/history?symbol=ETHUSDT&interval=1d&limit=30
+GET http://localhost:8081/api/price/history?symbol=ADAUSDT&interval=1d&limit=20
 
 ### Market snapshot (multiple symbols)
 GET http://localhost:8081/api/price/market_snapshot?symbols=BTCUSDT,ETHUSDT,SOLUSDT
