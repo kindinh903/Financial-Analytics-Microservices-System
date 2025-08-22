@@ -26,12 +26,12 @@ async def lifespan(app: FastAPI):
     )
     # await kafka_producer.start()
     app.state.ws_manager = WSManager(intervals=["1m", "5m", "15m", "1h", "5h"])
-    app.state.ws_manager.start()
+    app.state.ws_manager.start_all()
     yield
     await redis_client.close()
     await influx_writer.close()
     # await kafka_producer.stop()
-    app.state.ws_manager.stop()
+    app.state.ws_manager.stop_all()
 
 app = FastAPI(title="price-service", lifespan=lifespan)
 

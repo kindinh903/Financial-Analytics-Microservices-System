@@ -6,8 +6,9 @@ from datetime import datetime
 from app.config import settings, SYMBOL_WHITELIST
 from app.storage.redis_client import redis_client
 from app.storage.influx_client import influx_writer
-from app.services.broadcast import price_stream, candle_stream
+from app.services.broadcast import price_stream, candle_stream, market_snapshot_stream, top_movers_stream
 from app.services.price_service import price_service
+
 # from app.services.kafka_producer import kafka_producer
 
 
@@ -138,6 +139,93 @@ class WSManager:
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 60)
 
+    async def _consume_market_snapshot_ws(self, symbols=None):
+        """
+        Lấy snapshot realtime cho danh sách symbol truyền vào
+        Nếu symbols=None, lấy toàn bộ SYMBOL_WHITELIST
+        """
+        symbol_list = symbols or SYMBOL_WHITELIST
+        # Tạo stream URI theo từng symbol
+        streams = "/".join(f"{s.lower()}@miniTicker" for s in symbol_list)
+        uri = f"{self.url}/stream?streams={streams}"
+        backoff = 1
+
+        while self._running:
+            try:
+                async with websockets.connect(uri, ping_interval=20, close_timeout=5) as ws:
+                    backoff = 1
+                    async for msg in ws:
+                        try:
+                            data = json.loads(msg)
+                            # Binance trả về {'stream': 'btcusdt@miniTicker', 'data': {...}}
+                            ticker = data.get("data", {})
+                            symbol = ticker.get("s")
+                            if not symbol:
+                                continue
+
+                            last_price = float(ticker["c"])
+                            open_price = float(ticker["o"])
+                            price_change_percent = ((last_price - open_price) / open_price) * 100
+                            snapshot = {
+                                "symbol": symbol,
+                                "last_price": last_price,
+                                "price_change_percent": price_change_percent,
+                                "volume": float(ticker["v"]),
+                            }
+                            await market_snapshot_stream.broadcast(snapshot)
+                        except Exception as e:
+                            logger.error(f"Error parsing market snapshot WS: {e}")
+            except Exception as e:
+                logger.error(f"Market snapshot WS error: {e}")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+
+
+    async def _consume_top_movers_ws(self, limit: int = 10):
+        """
+        Top movers realtime (gainers/losers)
+        """
+        if not hasattr(self, "_ticker_cache"):
+            self._ticker_cache = {}
+
+        uri = f"{self.url}/stream?streams=!ticker@arr"
+        backoff = 1
+
+        while self._running:
+            try:
+                async with websockets.connect(uri, ping_interval=20, close_timeout=5) as ws:
+                    backoff = 1
+                    async for msg in ws:
+                        try:
+                            data = json.loads(msg)
+                            tickers = data.get("data", [])
+                            if isinstance(tickers, dict):
+                                tickers = [tickers]
+
+                            for t in tickers:
+                                if "s" not in t or "P" not in t:
+                                    continue
+                                self._ticker_cache[t["s"]] = t
+
+                            tickers_list = list(self._ticker_cache.values())
+                            gainers = sorted([t for t in tickers_list if float(t["P"])>0], key=lambda x: float(x["P"]), reverse=True)[:limit]
+                            losers = sorted([t for t in tickers_list if float(t["P"])<0], key=lambda x: float(x["P"]))[:limit]
+
+                            movers = {
+                                "top_gainers":[{"symbol": t["s"], "last_price": float(t["c"]), "price_change_percent": float(t["P"]), "volume": float(t["v"])} for t in gainers],
+                                "top_losers":[{"symbol": t["s"], "last_price": float(t["c"]), "price_change_percent": float(t["P"]), "volume": float(t["v"])} for t in losers]
+                            }
+
+                            await top_movers_stream.broadcast(movers)
+
+                        except Exception as e:
+                            logger.error(f"Error parsing top movers WS: {e}")
+            except Exception as e:
+                logger.error(f"Top movers WS error: {e}")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff*2, 60)
+
+
     def _interval_to_milliseconds(self, interval: str) -> int:
         if not interval or len(interval) < 2:
             return 0
@@ -165,12 +253,18 @@ class WSManager:
             logger.info(f"[{datetime.utcnow()}] Interval stats: {self.interval_stats}")
             await asyncio.sleep(60)  # In log mỗi phút
 
-    def start(self):
+    def start_all(self):
+        """
+        Khởi chạy tất cả các task WS và snapshot/top movers
+        """
         self._running = True
         self._task = asyncio.create_task(self._connect_and_consume())
+        self._snapshot_task = asyncio.create_task(self._consume_market_snapshot_ws())
+        self._top_movers_task = asyncio.create_task(self._consume_top_movers_ws())
 
-    def stop(self):
+
+    def stop_all(self):
         self._running = False
-        if self._task:
-            self._task.cancel()
-            self._task = None
+        for t in [self._task, getattr(self, "_snapshot_task", None), getattr(self, "_top_movers_task", None)]:
+            if t:
+                t.cancel()

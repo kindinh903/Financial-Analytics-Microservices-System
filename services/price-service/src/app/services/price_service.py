@@ -1,6 +1,7 @@
 # =========================
 # src/app/services/price_service.py
 # =========================
+import asyncio
 from typing import List, Optional
 from app.storage.redis_client import redis_client
 from app.storage.influx_client import influx_writer
@@ -187,9 +188,9 @@ class PriceService:
                     continue
                 break
 
-            # Save and persist
-            for c in new_unique:
-                await self.save_candle(symbol, interval, c, persist_influx=False)
+            # Không lưu vào redis để tránh xoá mất dữ liệu realtime gần nhất
+            # for c in new_unique:
+            #     await self.save_candle(symbol, interval, c, persist_influx=False)
             await self.influx.write_batch(new_unique)
 
             for c in new_unique:
@@ -208,22 +209,45 @@ class PriceService:
 
 
     async def fill_missing_candles(self, symbol: str, interval: str, from_time: int, to_time: int):
-            """
-            Fetch lại candles từ Binance để lấp gap.
-            """
-            logger.warning(f"[GAP-DETECTED] Fetching missing candles {symbol}-{interval} "
-                        f"from {from_time} to {to_time}")
+        """
+        Fetch lại candles từ Binance để lấp gap  
+        """
+        logger.warning(
+            f"[GAP-DETECTED] Fetching missing candles {symbol}-{interval} "
+            f"from {from_time} to {to_time}"
+        )
 
-            klines = await fetch_klines(symbol, interval, 1000, from_time, to_time)
+        interval_ms = self._interval_to_milliseconds(interval)
+        current_start = from_time
+        all_candles = []
+        max_limit = 1000  # Binance giới hạn tối đa 1000 nến mỗi request
+
+        while current_start < to_time:
+            fetch_limit = min(max_limit, (to_time - current_start) // interval_ms + 1)
+            klines = await fetch_klines(symbol, interval, fetch_limit, current_start, to_time)
             if not klines:
-                return []
+                break  # Không còn dữ liệu
 
-            await self.influx.write_batch(klines)
-            for c in klines:
-                await self.save_candle(symbol, interval, c)
+            all_candles.extend(klines)
 
-            logger.info(f"✅ Filled {len(klines)} missing candles for {symbol}-{interval}")
-            return klines
+            # Cập nhật start_time cho batch tiếp theo
+            last_close_time = klines[-1]["close_time"]
+            current_start = last_close_time + interval_ms
+
+            # Tránh loop quá nhanh gây rate limit
+            await asyncio.sleep(0.1)
+
+        if all_candles:
+            # Lưu batch vào Influx
+            await self.influx.write_batch(all_candles)
+
+            # Lưu vào Redis qua save_candle nhưng persist_influx=False để không ghi lại Influx
+            for c in all_candles:
+                await self.save_candle(symbol, interval, c, persist_influx=False)
+
+        logger.info(f"✅ Filled {len(all_candles)} missing candles for {symbol}-{interval}")
+        return all_candles
+
 import json
 
 def json_dumps(o):
