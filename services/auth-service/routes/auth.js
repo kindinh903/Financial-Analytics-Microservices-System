@@ -195,9 +195,7 @@ router.post('/login', validateLogin, async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        isEmailVerified: user.isEmailVerified,
-        preferences: user.preferences,
-        subscription: user.subscription
+        isEmailVerified: user.isEmailVerified
       },
       tokens: {
         accessToken,
@@ -421,21 +419,6 @@ router.post('/reset-password', [
     res.status(500).json({
       error: 'Password reset failed',
       message: 'Internal server error during password reset'
-    });
-  }
-});
-
-// Get current user (protected route)
-router.get('/me', authenticateToken, async (req, res) => {
-  try {
-    res.json({
-      user: req.user
-    });
-  } catch (error) {
-    console.error('Get current user error:', error);
-    res.status(500).json({
-      error: 'Failed to get user data',
-      message: 'Internal server error'
     });
   }
 });

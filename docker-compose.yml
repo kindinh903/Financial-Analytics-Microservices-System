@@ -12,14 +12,33 @@ services:
       - JWT_REFRESH_SECRET=your-super-secret-refresh-jwt-key-change-this-in-production
       - REDIS_URL=redis://redis:6379
       - FRONTEND_URL=http://localhost:3000
+      - DB_HOST=auth-db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=secret
+      - DB_NAME=mydb
     depends_on:
       - mongodb
       - redis
+      - auth-db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8087/health"]
       interval: 10s
       timeout: 3s
       retries: 3
+
+  auth-db:
+    image: postgres:15
+    container_name: my-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
 
   notification-service:
     build: ./services/notification-service
@@ -244,3 +263,4 @@ services:
 volumes:
   mongodb_data:
   kafka-data:
+  auth-db-data:

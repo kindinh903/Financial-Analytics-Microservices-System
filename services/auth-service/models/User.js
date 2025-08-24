@@ -57,40 +57,7 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  lockUntil: Date,
-  preferences: {
-    theme: {
-      type: String,
-      enum: ['light', 'dark'],
-      default: 'light'
-    },
-    timezone: {
-      type: String,
-      default: 'UTC'
-    },
-    currency: {
-      type: String,
-      default: 'USD'
-    },
-    notifications: {
-      email: { type: Boolean, default: true },
-      push: { type: Boolean, default: true },
-      sms: { type: Boolean, default: false }
-    }
-  },
-  subscription: {
-    plan: {
-      type: String,
-      enum: ['free', 'basic', 'premium', 'enterprise'],
-      default: 'free'
-    },
-    startDate: Date,
-    endDate: Date,
-    isActive: {
-      type: Boolean,
-      default: true
-    }
-  }
+  lockUntil: Date
 }, {
   timestamps: true
 });
@@ -98,7 +65,6 @@ const userSchema = new mongoose.Schema({
 // Index for better query performance
 userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
-userSchema.index({ 'subscription.isActive': 1 });
 
 // Virtual for full name
 userSchema.virtual('fullName').get(function() {

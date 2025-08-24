@@ -49,7 +49,14 @@ docker-compose up --build
 - **Các services KHÔNG expose ports ra ngoài** - chỉ có thể truy cập qua Gateway
 - Healthcheck tại `/health` qua Gateway
 
-## API Endpoints qua Gateway
+**Endpoints**:
+- `GET /api/users/me` - Get current user profile
+- `PUT /api/users/me` - Update user profile
+- `PUT /api/users/me/preferences` - Update preferences
+- `GET /api/users/me/subscription` - Get subscription info
+- `GET /api/users` - Get all users (admin)
+- `PUT /api/users/:id` - Update user (admin)
+- `DELETE /api/users/:id` - Delete user (admin)
 
 Tất cả APIs phải được gọi qua Gateway:
 

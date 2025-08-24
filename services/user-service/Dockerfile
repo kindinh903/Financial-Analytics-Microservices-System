@@ -1,11 +1,22 @@
-FROM maven:3.9.6-eclipse-temurin-17 AS build
-WORKDIR /app
-COPY . .
-RUN mvn clean package -DskipTests
+FROM node:18-alpine
 
-FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/user-service-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8085
-HEALTHCHECK --interval=10s --timeout=3s CMD curl -f http://localhost:8085/actuator/health || exit 1
-ENTRYPOINT ["java", "-jar", "app.jar"] 
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 8088
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8088/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Start the application
+CMD ["npm", "start"] 
