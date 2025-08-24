@@ -1,16 +1,30 @@
-##realtime
-GET http://localhost:8080/api/price/realtime?symbol=DOTUSDT 
+### =======================
+### Price Service API Test
+### =======================
+
+### Get realtime price
+GET http://localhost:8081/api/price/realtime?symbol=DOTUSDT
+
+### Get candles (default 1m, limit=500)
+GET http://localhost:8081/api/price/candles?limit=1000&symbol=ADAUSDT
+
+### Get candles (full params)
+GET http://localhost:8081/api/price/candles?symbol=ADAUSDT&interval=15m&limit=1000&start_time=1710000000000&end_time=1710100000000
+
+### Get supported symbols
+GET http://localhost:8081/api/price/symbol
+
+# ### Get history (1D interval)
+# GET http://localhost:8081/api/price/history?symbol=ADAUSDT&interval=1d&limit=20
+
+### Market snapshot (multiple symbols)
+GET http://localhost:8081/api/price/market_snapshot?symbols=BTCUSDT,ETHUSDT,SOLUSDT
+
+### Top movers (gainers & losers)
+GET http://localhost:8081/api/price/top_movers?limit=5
 
 
-
-### candle
-GET http://localhost:8080/api/price/candles?symbol=BTCUSDT 
-
-
-### api candle full
-GET http://localhost:8080/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100
-
-
+SYMBOL_WHITELIST = [
     "BTCUSDT",
     "ETHUSDT",
     "BNBUSDT",
@@ -20,3 +34,10 @@ GET http://localhost:8080/api/price/candles?symbol=SOLUSDT&interval=1m&limit=100
     "DOGEUSDT",
     "DOTUSDT",
     "LTCUSDT"
+]
+
+INTERVALS = [
+    "1m", "3m", "5m", "15m", "30m",
+    "1h", "2h", "4h", "6h", "8h", "12h",
+    "1d", "3d", "1w", "1M"
+]

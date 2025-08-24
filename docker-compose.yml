@@ -70,8 +70,9 @@ services:
       - INFLUX_ORG=Financial-Analytics
       - INFLUX_BUCKET=PriceServiceDB
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_ENABLED=false
     depends_on:
-      - kafka
+      # - kafka
       - redis
       - influxdb
     healthcheck:

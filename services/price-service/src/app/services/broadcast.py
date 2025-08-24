@@ -4,16 +4,12 @@ from fastapi import WebSocket
 
 class BroadcastManager:
     def __init__(self):
-        # Mỗi kết nối lưu thêm filter symbol & interval
         self.active_connections: list[dict] = []
 
-    async def connect(self, websocket: WebSocket, symbol: Optional[str] = None, interval: Optional[str] = None):
+    async def connect(self, websocket: WebSocket, **kwargs):
         await websocket.accept()
-        self.active_connections.append({
-            "ws": websocket,
-            "symbol": symbol.upper() if symbol else None,
-            "interval": interval
-        })
+        # Lưu tất cả thông tin kết nối, ví dụ symbol, interval, limit, symbols
+        self.active_connections.append({"ws": websocket, **kwargs})
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections = [
@@ -21,30 +17,37 @@ class BroadcastManager:
         ]
 
     async def broadcast(self, message: dict):
-        """
-        message có thể là:
-        - giá: {"symbol": "BTCUSDT", "price": ..., "timestamp": ...}
-        - nến: {"symbol": "BTCUSDT", "interval": "1m", ...}
-        """
         to_remove = []
         for conn in self.active_connections:
             ws = conn["ws"]
+            limit = conn.get("limit")  # Lấy limit từ connection (nếu có)
             try:
-                # Lọc theo symbol
-                if conn["symbol"] and message.get("symbol") != conn["symbol"]:
+                # Lọc theo symbol nếu có
+                if conn.get("symbol") and message.get("symbol") != conn.get("symbol"):
                     continue
                 # Lọc theo interval nếu có
-                if conn["interval"] and message.get("interval") != conn["interval"]:
+                if conn.get("interval") and message.get("interval") != conn.get("interval"):
                     continue
 
-                await ws.send_json(message)
+                # Nếu message là top movers, áp dụng limit
+                if "top_gainers" in message and "top_losers" in message and limit:
+                    filtered_msg = {
+                        "top_gainers": message["top_gainers"][:limit],
+                        "top_losers": message["top_losers"][:limit]
+                    }
+                    await ws.send_json(filtered_msg)
+                else:
+                    await ws.send_json(message)
             except:
                 to_remove.append(ws)
-
-        # Xóa kết nối bị lỗi
         for ws in to_remove:
             self.disconnect(ws)
 
 # Tạo 2 instance riêng cho price và candle
 price_stream = BroadcastManager()
 candle_stream = BroadcastManager()
+market_snapshot_stream = BroadcastManager()
+top_movers_stream = BroadcastManager()
+
+
+

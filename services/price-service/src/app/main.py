@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.config import settings, SYMBOL_WHITELIST
+from app.config import settings, SYMBOL_WHITELIST, INTERVALS
 from app.storage.redis_client import redis_client
 from app.storage.influx_client import influx_writer
 from app.routes.api import router as api_router
@@ -25,13 +25,13 @@ async def lifespan(app: FastAPI):
         settings.INFLUX_BUCKET
     )
     await kafka_producer.start()
-    app.state.ws_manager = WSManager(intervals=["1m", "5m", "15m", "1h", "5h"])
-    app.state.ws_manager.start()
+    app.state.ws_manager = WSManager(intervals=INTERVALS)
+    app.state.ws_manager.start_all()
     yield
     await redis_client.close()
     await influx_writer.close()
     await kafka_producer.stop()
-    app.state.ws_manager.stop()
+    app.state.ws_manager.stop_all()
 
 app = FastAPI(title="price-service", lifespan=lifespan)
 
