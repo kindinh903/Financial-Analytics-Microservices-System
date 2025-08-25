@@ -24,5 +24,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.EmailVerificationToken).HasMaxLength(100);
             entity.Property(e => e.PasswordResetToken).HasMaxLength(100);
         });
+        // Configure RefreshToken
+        builder.Entity<RefreshToken>(entity =>
+        {
+            entity.Property(e => e.Token).HasMaxLength(512);
+        });
     }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 } 

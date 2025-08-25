@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using AuthService.Models;
 using AuthService.Models.DTOs;
 using AuthService.Services;
+using AuthService.Data;
 
 namespace AuthService.Services;
 
@@ -10,11 +11,13 @@ public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IJwtService _jwtService;
+    private readonly ApplicationDbContext _dbContext;
 
-    public AuthService(UserManager<ApplicationUser> userManager, IJwtService jwtService)
+    public AuthService(UserManager<ApplicationUser> userManager, IJwtService jwtService, ApplicationDbContext dbContext)
     {
         _userManager = userManager;
         _jwtService = jwtService;
+        _dbContext = dbContext;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -57,6 +60,18 @@ public class AuthService : IAuthService
             // Generate tokens
             var accessToken = _jwtService.GenerateAccessToken(user);
             var refreshToken = _jwtService.GenerateRefreshToken(user);
+
+            // Save refresh token to DB
+            var refreshTokenEntity = new RefreshToken
+            {
+                Token = refreshToken,
+                UserId = user.Id,
+                ExpiresAt = DateTime.UtcNow.AddDays(14),
+                IsRevoked = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbContext.RefreshTokens.Add(refreshTokenEntity);
+            await _dbContext.SaveChangesAsync();
 
             return new AuthResponse
             {
@@ -135,6 +150,18 @@ public class AuthService : IAuthService
             // Generate tokens
             var accessToken = _jwtService.GenerateAccessToken(user);
             var refreshToken = _jwtService.GenerateRefreshToken(user);
+
+            // Save refresh token to DB
+            var refreshTokenEntity = new RefreshToken
+            {
+                Token = refreshToken,
+                UserId = user.Id,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsRevoked = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbContext.RefreshTokens.Add(refreshTokenEntity);
+            await _dbContext.SaveChangesAsync();
 
             return new AuthResponse
             {
@@ -220,9 +247,15 @@ public class AuthService : IAuthService
 
     public async Task<bool> LogoutAsync(string token)
     {
-        // In a real application, you would add the token to a blacklist
-        // For now, we'll just return true
-        return true;
+        // Remove refresh token from DB
+        var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == token);
+        if (refreshToken != null)
+        {
+            _dbContext.RefreshTokens.Remove(refreshToken);
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+        return false;
     }
 
     public async Task<bool> VerifyEmailAsync(string token)
