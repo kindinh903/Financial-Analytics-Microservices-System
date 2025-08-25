@@ -1,7 +1,9 @@
 # Auth Service (.NET)
 
 Authentication service built with ASP.NET Core, Identity, and PostgreSQL.
-
+Cần làm thêm rate limit, cors và x-user
+/reset-password /verify-email/:token
+blacklist
 ## Features
 
 - User registration and login
