@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+require('./kafkaConsumer');
 
 const userRoutes = require('./routes/user');
 const { authenticateToken } = require('./middleware/auth');

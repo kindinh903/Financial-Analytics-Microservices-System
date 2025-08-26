@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using AuthService.Models.DTOs;
 using AuthService.Services;
+using AuthService.Utils;
 
 namespace AuthService.Controllers;
 
@@ -9,6 +10,7 @@ namespace AuthService.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly KafkaPublisher _kafkaPublisher = new KafkaPublisher();
 
     public AuthController(IAuthService authService)
     {
@@ -27,6 +29,13 @@ public class AuthController : ControllerBase
         
         if (response.Success)
         {
+            var userEvent = new {
+                authUserId = response.User.Id,
+                firstName = response.User.FirstName,
+                lastName = response.User.LastName,
+                email = response.User.Email
+            };
+            await _kafkaPublisher.PublishUserRegistered(userEvent);
             return CreatedAtAction(nameof(Register), response);
         }
 
