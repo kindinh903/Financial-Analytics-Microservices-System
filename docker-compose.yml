@@ -35,22 +35,22 @@ services:
     volumes:
       - auth-db-data:/var/lib/postgresql/data
 
-  notification-service:
-    build: ./services/notification-service
-    container_name: notification-service
-    expose: ["8086"]         
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # notification-service:
+  #   build: ./services/notification-service
+  #   container_name: notification-service
+  #   expose: ["8086"]         
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
   price-service:
     build: ./services/price-service
@@ -76,57 +76,57 @@ services:
       timeout: 3s
       retries: 3
 
-  news-service:
-    build: ./services/news-service
-    container_name: news-service
-    expose: ["8083"]        # Changed from 8082 to avoid conflict
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # news-service:
+  #   build: ./services/news-service
+  #   container_name: news-service
+  #   expose: ["8083"]        # Changed from 8082 to avoid conflict
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
-  backtest-service:
-    build: ./services/backtest-service
-    container_name: backtest-service
-    expose: ["8082"]         # Backtest service uses port 8082
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # backtest-service:
+  #   build: ./services/backtest-service
+  #   container_name: backtest-service
+  #   expose: ["8082"]         # Backtest service uses port 8082
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
-  ai-service:
-    build: ./services/ai-service
-    container_name: ai-service
-    expose: ["8084"]         
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # ai-service:
+  #   build: ./services/ai-service
+  #   container_name: ai-service
+  #   expose: ["8084"]         
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
   user-service:
     build: ./services/user-service
@@ -158,6 +158,8 @@ services:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
     depends_on:
       - kafka
       - redis
