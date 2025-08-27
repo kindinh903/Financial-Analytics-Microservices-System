@@ -1,9 +1,14 @@
 const { Kafka } = require('kafkajs');
 const User = require('./models/User');
-const kafka = new Kafka({ brokers: ['localhost:9092'] });
+
+// Read broker list from env (comma-separated). Default to docker network name and port 29092
+const brokerEnv = process.env.KAFKA_BROKER || 'kafka:29092';
+const brokers = brokerEnv.split(',').map(b => b.trim()).filter(Boolean);
+
+const kafka = new Kafka({ brokers });
 const consumer = kafka.consumer({ groupId: 'user-service-group' });
 
-async function runConsumer() {
+async function startKafkaConsumer() {
   await consumer.connect();
   await consumer.subscribe({ topic: 'UserRegistered', fromBeginning: false });
 
@@ -24,4 +29,4 @@ async function runConsumer() {
   });
 }
 
-runConsumer();
+module.exports = { startKafkaConsumer };

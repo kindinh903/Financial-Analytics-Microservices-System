@@ -11,6 +11,9 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
+# Default env for Kafka broker inside Docker network
+ENV KAFKA_BROKER=kafka:29092
+
 # Expose port
 EXPOSE 8088
 

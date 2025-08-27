@@ -31,14 +31,22 @@ const userSchema = new mongoose.Schema({
   username: {
     type: String,
     unique: true,
-    trim: true,
-    index: true
+    trim: true
   },
   // Role from auth service (for quick access)
   role: {
     type: String,
     enum: ['user', 'premium', 'admin'],
     default: 'user'
+  },
+  // Access permissions and feature flags
+  permissions: {
+    type: [String],
+    default: ['free']
+  },
+  features: {
+    type: [String],
+    default: ['basic-dashboard', 'news']
   },
   // Account status
   isActive: {

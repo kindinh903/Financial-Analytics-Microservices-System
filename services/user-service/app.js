@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-require('./kafkaConsumer');
+const { startKafkaConsumer } = require('./kafkaConsumer');
 
 const userRoutes = require('./routes/user');
 const { authenticateToken } = require('./middleware/auth');
@@ -50,11 +50,17 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/user_mana
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => {
+.then(async () => {
   console.log('Connected to MongoDB');
   app.listen(PORT, () => {
     console.log(`User Service running on port ${PORT}`);
   });
+  try {
+    await startKafkaConsumer();
+    console.log('Kafka consumer started');
+  } catch (err) {
+    console.error('Failed to start Kafka consumer:', err && err.message ? err.message : err);
+  }
 })
 .catch((err) => {
   console.error('MongoDB connection error:', err);
