@@ -68,8 +68,13 @@ public class AuthController : ControllerBase
         var userPermissions = await _redisCacheService.GetAsync<UserPermissionsDto>(userId);
         if (userPermissions == null)
         {
-            userPermissions = await _userServiceClient.GetUserPermissionsAsync(userId);
             Console.WriteLine("User permissions not found in Redis cache, UserService: ", userPermissions);
+            userPermissions = await _userServiceClient.GetUserPermissionsAsync(
+                userId,
+                response.User.Email,
+                response.User.FirstName,
+                response.User.LastName
+            );
             if (userPermissions != null)
                 await _redisCacheService.SetAsync(userId, userPermissions);
             else

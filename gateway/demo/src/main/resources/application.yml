@@ -50,6 +50,7 @@ spring:
             - Path=/api/users/**
           filters:
             - RewritePath=/api/(?<segment>.*), /api/${segment}
+            - name: AuthenticationFilter
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter.replenishRate: 10
@@ -62,6 +63,7 @@ spring:
             - Path=/api/price/**
           filters:
             - RewritePath=/api/(?<segment>.*), /api/${segment}
+            - name: AuthenticationFilter
             - name: RequestRateLimiter
               args:
                 redis-rate-limiter.replenishRate: 10
@@ -94,3 +96,6 @@ logging:
     org.springframework.web.reactive: DEBUG
     reactor.netty: DEBUG
     org.springframework.web.server.adapter.HttpWebHandlerAdapter: DEBUG
+jwt:
+  key: your-super-secret-jwt-key-here-make-it-long-and-secure
+  enabled: true

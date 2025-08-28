@@ -19,11 +19,27 @@ namespace AuthService.Services
 
         public async Task<UserPermissionsDto?> GetUserPermissionsAsync(string userId)
         {
+            return await GetUserPermissionsAsync(userId, null, null, null);
+        }
+
+        public async Task<UserPermissionsDto?> GetUserPermissionsAsync(
+            string userId,
+            string? email,
+            string? firstName,
+            string? lastName
+            )
+        {
             var url = $"{_userServiceBaseUrl}/api/users/{userId}/permissions";
             try
             {
                 Console.WriteLine($"Requesting user permissions for userId: {userId}");
-                var response = await _httpClient.GetAsync(url);
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                if (!string.IsNullOrEmpty(userId)) request.Headers.Add("X-User-Id", userId);
+                if (!string.IsNullOrEmpty(email)) request.Headers.Add("X-User-Email", email);
+                if (!string.IsNullOrEmpty(firstName)) request.Headers.Add("X-User-First-Name", firstName);
+                if (!string.IsNullOrEmpty(lastName)) request.Headers.Add("X-User-Last-Name", lastName);
+
+                var response = await _httpClient.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<UserPermissionsDto>();

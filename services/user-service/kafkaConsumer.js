@@ -14,17 +14,31 @@ async function startKafkaConsumer() {
 
   await consumer.run({
     eachMessage: async ({ message }) => {
-      const userData = JSON.parse(message.value.toString());
-      // Tạo user profile
-      console.log('Received user event:', userData);
-      await User.create({
-        authUserId: userData.authUserId,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        permissions: ['free'],
-        features: ['basic-dashboard', 'news'],
-        });
+      try {
+        const userData = JSON.parse(message.value.toString());
+        console.log('Received user event:', userData);
+
+        // Upsert by authUserId to avoid duplicates and commit offset on success
+        await User.findOneAndUpdate(
+          { authUserId: userData.authUserId },
+          {
+            $set: {
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              email: userData.email,
+            },
+            $setOnInsert: {
+              permissions: ['free'],
+              features: ['basic-dashboard', 'news'],
+              isActive: true,
+            },
+          },
+          { upsert: true, new: true }
+        );
+      } catch (err) {
+        // Log and swallow to prevent infinite retries on the same offset
+        console.error('Kafka consumer error processing message:', err && err.message ? err.message : err);
+      }
     },
   });
 }

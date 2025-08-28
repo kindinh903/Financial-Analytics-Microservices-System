@@ -28,11 +28,6 @@ const userSchema = new mongoose.Schema({
     trim: true,
     index: true
   },
-  username: {
-    type: String,
-    unique: true,
-    trim: true
-  },
   // Role from auth service (for quick access)
   role: {
     type: String,
@@ -128,8 +123,8 @@ userSchema.statics.findByAuthId = function(authId) {
 userSchema.statics.findByEmailOrUsername = function(identifier) {
   return this.findOne({
     $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier }
+      { email: identifier.toLowerCase() }
+      // { username: identifier }
     ]
   });
 };
