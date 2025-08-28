@@ -10,7 +10,7 @@ namespace AuthService.Services;
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IJwtService _jwtService;
+        internal readonly IJwtService _jwtService;
     private readonly ApplicationDbContext _dbContext;
 
     public AuthService(UserManager<ApplicationUser> userManager, IJwtService jwtService, ApplicationDbContext dbContext)

@@ -12,6 +12,7 @@ services:
       - Jwt__Issuer=http://auth-service:8087
       - Jwt__Audience=http://auth-service:8087
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
     depends_on:
       - mongodb
       - redis
