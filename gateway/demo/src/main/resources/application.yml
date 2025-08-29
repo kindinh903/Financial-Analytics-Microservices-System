@@ -97,5 +97,5 @@ logging:
     reactor.netty: DEBUG
     org.springframework.web.server.adapter.HttpWebHandlerAdapter: DEBUG
 jwt:
-  key: your-super-secret-jwt-key-here-make-it-long-and-secure
+  key: daiduongmenhmongoihoiemodauhuhuhihihehe_2025_super_secret_key_for_jwt_signing_256_bits_minimum_required
   enabled: true

@@ -8,7 +8,7 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8087
       - ConnectionStrings__DefaultConnection=Host=auth-db;Port=5432;Database=mydb;Username=admin;Password=secret
-      - Jwt__Key=your-super-secret-jwt-key-here-make-it-long-and-secure
+      - Jwt__Key=daiduongmenhmongoihoiemodauhuhuhihihehe_2025_super_secret_key_for_jwt_signing_256_bits_minimum_required
       - Jwt__Issuer=http://auth-service:8087
       - Jwt__Audience=http://auth-service:8087
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
