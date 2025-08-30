@@ -597,3 +597,6 @@ loki_data/
 
 # Helm
 charts/*.tgz
+
+
+services/ai-service/data
