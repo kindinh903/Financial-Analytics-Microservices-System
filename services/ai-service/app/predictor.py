@@ -1,107 +1,71 @@
-import torch
-import torch.nn as nn
+import json
 import joblib
 import numpy as np
 import pandas as pd
-from typing import List, Union
 from pathlib import Path
-from app.data_utils import load_ohlcv_from_json
-from app.data_utils import load_ohlcv_from_json, prepare_features
-MODEL_DIR = Path("models")  # không thêm ./ để tránh bug khi chạy module
+from train.train_one import ensure_datetime, compute_technical_indicators, create_lag_features
 
 
+def prepare_features_for_predict(df: pd.DataFrame, feature_columns: list, seq_len: int = 20):
+    df = ensure_datetime(df)
+
+    # sentiment mặc định 0 nếu không có
+    if "sentiment" not in df.columns:
+        df["sentiment"] = 0.0
+
+    # sentiment features
+    df["sentiment_diff"] = df["sentiment"].diff()
+    df["sentiment_ma3"] = df["sentiment"].rolling(window=3).mean()
+    df["sentiment_vol7"] = df["sentiment"].rolling(window=7).std()
+
+    df = compute_technical_indicators(df)
+    df = create_lag_features(df, seq_len=seq_len, use_close_lags=True)
+
+    # lấy hàng cuối cùng không NaN
+    candidate = df[feature_columns].dropna().tail(1)
+    if len(candidate) == 0:
+        raise ValueError("Không đủ dữ liệu để tạo features, cần thêm nhiều nến hơn")
+
+    return candidate, df
 
 
-class MLPModel(nn.Module):
-    def __init__(self, input_dim: int, hidden_dims: List[int] = [64, 64], output_dim: int = 1):
-        super().__init__()
-        layers = []
-        prev_dim = input_dim
-        for hdim in hidden_dims:
-            layers.append(nn.Linear(prev_dim, hdim))
-            layers.append(nn.ReLU())
-            prev_dim = hdim
-        layers.append(nn.Linear(prev_dim, output_dim))
-        self.net = nn.Sequential(*layers)
+def predict_next_close(df: pd.DataFrame, model_dir: str = "models") -> dict:
+    symbol = df["symbol"].iloc[0]
+    interval = df["interval"].iloc[0]
 
-    def forward(self, x):
-        return self.net(x)
+    model_dir = Path(model_dir) / f"{symbol}_{interval}"
+    model_path = model_dir / "model.pkl"
+    meta_path = model_dir / "meta.json"
+
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model not found: {model_path}")
+
+    # Load meta.json để biết feature_columns
+    with open(meta_path, "r") as f:
+        meta = json.load(f)
+    feature_columns = meta["feature_columns"]
+    seq_len = meta.get("seq_len", 20)
+
+    # Feature engineering
+    X_last, df_feat = prepare_features_for_predict(df, feature_columns, seq_len)
+
+    # Load model
+    model = joblib.load(model_path)
+
+    # Predict log_return
+    pred_log_return = float(model.predict(X_last)[0])
+    last_close = float(df_feat["close"].iloc[-1])
+    y_pred = last_close * np.exp(pred_log_return)
+
+    trend = "UP" if y_pred > last_close else "DOWN"
+    change_pct = (y_pred - last_close) / last_close * 100
 
 
-class Predictor:
-    def __init__(self, symbol: str, interval: str, device: str = "cpu", hidden_dims: List[int] = [64, 64]):
-        self.symbol = symbol
-        self.interval = interval
-        self.device = device
-        self.hidden_dims = hidden_dims
-
-        self.model_path = MODEL_DIR / f"model_{symbol}_{interval}.pth"
-        self.scaler_path = MODEL_DIR / f"scaler_{symbol}_{interval}.pkl"
-
-        self.model = None
-        self.scaler = None
-
-    def load(self, input_dim: int):
-        # Load model
-        self.model = MLPModel(input_dim, self.hidden_dims).to(self.device)
-        state_dict = torch.load(self.model_path, map_location=self.device)
-        self.model.load_state_dict(state_dict)
-        self.model.eval()
-
-        # Load scaler
-        self.scaler = joblib.load(self.scaler_path)
-
-    def _make_input(self, df: pd.DataFrame, seq_len=20) -> np.ndarray:
-        """Tạo input giống lúc train (sequence close + volume + sentiment)."""
-        df = df.reset_index(drop=True)
-        close = df["close"].values
-        vol = df.get("volume", pd.Series([0] * len(df))).values
-        sent = df["sentiment"].values
-
-        if len(df) < seq_len + 1:
-            raise ValueError(f"Not enough data, need at least {seq_len+1} rows")
-
-        # Lấy sequence cuối cùng
-        i = len(df) - 1
-        x_feat = np.hstack([
-            close[i - seq_len:i],
-            vol[i - seq_len:i],
-            [sent[i]],
-        ])
-        return x_feat.astype(np.float32)
-
-    def predict(self, json_data, seq_len=20) -> float:
-        # Load OHLCV từ json hoặc df
-        df_raw = load_ohlcv_from_json(json_data)
-
-        # ✅ Thêm sentiment + technical features
-        X, df = prepare_features(df_raw, add_sentiment=True)
-
-        # Lấy input_dim = số feature (không nhân seq_len)
-        input_dim = X.shape[1]
-
-        # Lấy input cuối cùng (1 vector)
-
-        # Lấy input_dim = số feature * seq_len
-        # input_dim = X.shape[1] * seq_len
-
-        # ✅ Load model + scaler nếu chưa có
-        if self.model is None or self.scaler is None:
-            self.load(input_dim)
-
-        # Scale dữ liệu
-        df_scaled = X.copy()
-        df_scaled[["close", "volume", "return", "ma", "volatility", "sentiment"]] = \
-            self.scaler.transform(df_scaled[["close", "volume", "return", "ma", "volatility", "sentiment"]])
-
-        # Lấy input cuối
-        # x_last = df_scaled.iloc[-seq_len:].to_numpy().flatten().astype(np.float32)
-        x_last = df_scaled.iloc[-1].to_numpy().astype(np.float32)
-
-        with torch.no_grad():
-            X_tensor = torch.from_numpy(x_last).unsqueeze(0).to(self.device)
-            y_pred_scaled = self.model(X_tensor).cpu().numpy().flatten()[0]
-
-        # Inverse scale giá close
-        y_pred = self.scaler.inverse_transform([[y_pred_scaled]])[0, 0]
-        return float(y_pred)
+    return {
+        "symbol": symbol,
+        "interval": interval,
+        "last_close": last_close,
+        "predicted_next_close": y_pred,
+        "trend": trend,
+        "change_percent": change_pct
+    }

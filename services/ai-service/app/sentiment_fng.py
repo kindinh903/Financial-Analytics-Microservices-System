@@ -3,15 +3,13 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import requests
 import pandas as pd
+from app.config import settings
 
-API_URL = os.getenv("FNG_API_URL", "https://api.alternative.me/fng/")
-CACHE_PATH = Path(os.getenv("FNG_CACHE_PATH", "./data/fng.csv"))
-CACHE_TTL_HOURS = int(os.getenv("FNG_CACHE_TTL_HOURS", 6))
 
 def fetch_fng_raw(limit: int = 1000):
     """Fetch raw FNG JSON from alternative.me API. Returns DataFrame with columns ['datetime','fng','fng_class']"""
     params = {"limit": limit, "format": "json"}
-    resp = requests.get(API_URL, params=params, timeout=10)
+    resp = requests.get(settings.API_URL, params=params, timeout=10)
     resp.raise_for_status()
     j = resp.json()
     data = j.get("data", [])
@@ -34,15 +32,15 @@ def fetch_fng_raw(limit: int = 1000):
     return df
 
 def load_fng_cache():
-    if CACHE_PATH.exists():
-        mtime = datetime.utcfromtimestamp(CACHE_PATH.stat().st_mtime)
-        if datetime.utcnow() - mtime < timedelta(hours=CACHE_TTL_HOURS):
-            return pd.read_csv(CACHE_PATH, parse_dates=["datetime"])
+    if settings.CACHE_PATH.exists():
+        mtime = datetime.utcfromtimestamp(settings.CACHE_PATH.stat().st_mtime)
+        if datetime.utcnow() - mtime < timedelta(hours=settings.CACHE_TTL_HOURS):
+            return pd.read_csv(settings.CACHE_PATH, parse_dates=["datetime"])
     return None
 
 def save_fng_cache(df: pd.DataFrame):
-    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(CACHE_PATH, index=False)
+    settings.CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(settings.CACHE_PATH, index=False)
 
 def get_fng(limit: int = 1000, refresh: bool = False):
     """Return FNG DataFrame (cached)."""

@@ -2,14 +2,16 @@
 FROM python:3.10-slim
 WORKDIR /app
 
-# system deps (darts may need build tools)
-RUN apt-get update && apt-get install -y build-essential git curl && apt-get clean
+# Copy all source code
+COPY ./app ./app
+COPY ./train ./train
+COPY ./data ./data
 
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+# Set environment variables (nếu cần)
+ENV PYTHONUNBUFFERED=1
 
-COPY . /app
-ENV PYTHONPATH=/app
-
+# Expose port
 EXPOSE 8084
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8084", "--ws", "auto"]
+
+# Command to run FastAPI app
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8084", "--reload"]
