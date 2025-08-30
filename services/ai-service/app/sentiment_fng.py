@@ -1,4 +1,3 @@
-# app/sentiment_fng.py
 import os
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -18,11 +17,9 @@ def fetch_fng_raw(limit: int = 1000):
     data = j.get("data", [])
     rows = []
     for it in data:
-        # API returns 'timestamp' (unix seconds) in many clients; fallbacks included
         ts = it.get("timestamp") or it.get("time") or it.get("timestamp_seconds")
         if ts is None:
             continue
-        # ensure integer, if string
         try:
             ts = int(ts)
         except Exception:
@@ -57,45 +54,39 @@ def get_fng(limit: int = 1000, refresh: bool = False):
     save_fng_cache(df)
     return df
 
-def merge_fng_to_ohlcv(ohlcv_df: pd.DataFrame, fng_df: pd.DataFrame = None, method: str = "ffill", normalize: bool = True):
-    """
-    Align FNG values to ohlcv_df datetimes.
-    - ohlcv_df must have 'datetime' column (pd.Timestamp)
-    - method: 'ffill' or 'bfill' or 'zero'
-    - normalize: True -> map 0..100 -> -1..1
-    Returns a new dataframe with added column 'sentiment'
-    """
+def merge_fng_to_ohlcv(ohlcv_df: pd.DataFrame, fng_df: pd.DataFrame = None, normalize: bool = True):
     df = ohlcv_df.copy()
-    df['datetime'] = pd.to_datetime(df['datetime'])
+    df['date'] = pd.to_datetime(df['datetime']).dt.date
 
+    # --- Load FNG ---
     if fng_df is None:
         fng_df = get_fng(limit=365)
 
-    fng = fng_df.copy()
-    fng['datetime'] = pd.to_datetime(fng['datetime'])
-    # set index to datetimes and reindex on the ohlcv datetimes
-    fng = fng.set_index('datetime').sort_index()
-    reidx = pd.DataFrame(index=df['datetime'])
-    # reindex will create NaNs where no daily value exists
-    fng_reindexed = fng.reindex(reidx.index, method=None)
-    if method == "ffill":
-        fng_reindexed = fng_reindexed.fillna(method='ffill')
-    elif method == "bfill":
-        fng_reindexed = fng_reindexed.fillna(method='bfill')
-    else:
-        fng_reindexed = fng_reindexed.fillna(50)  # neutral
+    fng_df = fng_df.copy()
+    fng_df['date'] = pd.to_datetime(fng_df['datetime']).dt.date
 
-    reidx['fng'] = fng_reindexed['fng'].values
-    # fill remaining NaNs to neutral 50
-    reidx['fng'] = reidx['fng'].fillna(50)
-
+    # --- Chuẩn hóa sentiment ---
     if normalize:
-        # map 0..100 -> -1..1 with 50 -> 0
-        reidx['sentiment'] = (reidx['fng'] - 50.0) / 50.0
+        fng_df['sentiment'] = (fng_df['fng'] - 50.0) / 50.0
     else:
-        reidx['sentiment'] = reidx['fng']
+        fng_df['sentiment'] = fng_df['fng']
 
-    reidx = reidx.reset_index().rename(columns={'index':'datetime'})
-    out = df.merge(reidx[['datetime','sentiment']], on='datetime', how='left')
-    out['sentiment'] = out['sentiment'].fillna(0.0)
-    return out
+    # --- Feature engineering từ FNG ---
+    fng_df = fng_df.sort_values('date')
+    fng_df['sentiment_diff'] = fng_df['sentiment'].diff().fillna(0)
+    fng_df['sentiment_ma3'] = fng_df['sentiment'].rolling(3).mean().fillna(method='bfill')
+    fng_df['sentiment_vol7'] = fng_df['sentiment'].rolling(7).std().fillna(0)
+
+    # --- Merge với OHLCV ---
+    merged = df.merge(
+        fng_df[['date', 'sentiment', 'sentiment_diff', 'sentiment_ma3', 'sentiment_vol7']],
+        on='date',
+        how='left'
+    )
+
+    # fill missing bằng neutral (0) nếu thiếu ngày
+    merged[['sentiment', 'sentiment_diff', 'sentiment_ma3', 'sentiment_vol7']] = merged[
+        ['sentiment', 'sentiment_diff', 'sentiment_ma3', 'sentiment_vol7']
+    ].fillna(0)
+
+    return merged.drop(columns=['date'])

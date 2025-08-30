@@ -1,73 +1,107 @@
-# app/predictor.py
-from typing import List, Optional, Dict, Any
+import torch
+import torch.nn as nn
+import joblib
+import numpy as np
 import pandas as pd
-from darts import TimeSeries
-from darts.models import Prophet
-from app.model_store import load_model
-from app.sentiment_fng import merge_fng_to_ohlcv
+from typing import List, Union
+from pathlib import Path
+from app.data_utils import load_ohlcv_from_json
+from app.data_utils import load_ohlcv_from_json, prepare_features
+MODEL_DIR = Path("models")  # không thêm ./ để tránh bug khi chạy module
+
+
+
+
+class MLPModel(nn.Module):
+    def __init__(self, input_dim: int, hidden_dims: List[int] = [64, 64], output_dim: int = 1):
+        super().__init__()
+        layers = []
+        prev_dim = input_dim
+        for hdim in hidden_dims:
+            layers.append(nn.Linear(prev_dim, hdim))
+            layers.append(nn.ReLU())
+            prev_dim = hdim
+        layers.append(nn.Linear(prev_dim, output_dim))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)
+
 
 class Predictor:
-    def __init__(self):
-        self._cache: Dict[str, Prophet] = {}  # symbol+interval -> model
+    def __init__(self, symbol: str, interval: str, device: str = "cpu", hidden_dims: List[int] = [64, 64]):
+        self.symbol = symbol
+        self.interval = interval
+        self.device = device
+        self.hidden_dims = hidden_dims
 
-    def _get_model(self, symbol: str, interval: str) -> Prophet:
-        key = f"{symbol}_{interval}"
-        if key in self._cache:
-            return self._cache[key]
-        model = load_model(symbol, interval)
-        if model is None:
-            raise ValueError(f"No model found for {symbol} {interval}")
-        self._cache[key] = model
-        return model
+        self.model_path = MODEL_DIR / f"model_{symbol}_{interval}.pth"
+        self.scaler_path = MODEL_DIR / f"scaler_{symbol}_{interval}.pkl"
 
-    def predict_from_candles(
-        self, 
-        symbol: str, 
-        interval: str, 
-        candles: List[Dict[str, Any]], 
-        sentiment: Optional[Dict[str, float]] = None,
-        steps: int = 1
-    ) -> Dict[str, Any]:
-        """
-        candles: list of dict with keys ['datetime','open','high','low','close','volume']
-        sentiment: dict with datetime -> sentiment (optional)
-        steps: number of future steps to predict
-        """
-        if not candles:
-            raise ValueError("candles list is empty")
+        self.model = None
+        self.scaler = None
 
-        df = pd.DataFrame(candles)
-        if 'datetime' not in df.columns:
-            raise ValueError("candles must include 'datetime' field")
-        df['datetime'] = pd.to_datetime(df['datetime'])
-        df = df.sort_values('datetime').reset_index(drop=True)
+    def load(self, input_dim: int):
+        # Load model
+        self.model = MLPModel(input_dim, self.hidden_dims).to(self.device)
+        state_dict = torch.load(self.model_path, map_location=self.device)
+        self.model.load_state_dict(state_dict)
+        self.model.eval()
 
-        # merge sentiment if provided
-        if sentiment:
-            df['sentiment'] = df['datetime'].map(sentiment).fillna(0.0)
+        # Load scaler
+        self.scaler = joblib.load(self.scaler_path)
 
-        ts = TimeSeries.from_dataframe(df, 'datetime', ['close'])
-        cov = None
-        if 'sentiment' in df.columns:
-            cov = TimeSeries.from_dataframe(df, 'datetime', ['sentiment'])
+    def _make_input(self, df: pd.DataFrame, seq_len=20) -> np.ndarray:
+        """Tạo input giống lúc train (sequence close + volume + sentiment)."""
+        df = df.reset_index(drop=True)
+        close = df["close"].values
+        vol = df.get("volume", pd.Series([0] * len(df))).values
+        sent = df["sentiment"].values
 
-        model = self._get_model(symbol, interval)
+        if len(df) < seq_len + 1:
+            raise ValueError(f"Not enough data, need at least {seq_len+1} rows")
 
-        # predict next `steps`
-        if cov is not None:
-            # future_covariates: take last covariate row repeated `steps` times
-            last_cov = cov[-1:]
-            future_cov = last_cov.stack(steps)
-            forecast = model.predict(n=steps, future_covariates=future_cov)
-        else:
-            forecast = model.predict(n=steps)
+        # Lấy sequence cuối cùng
+        i = len(df) - 1
+        x_feat = np.hstack([
+            close[i - seq_len:i],
+            vol[i - seq_len:i],
+            [sent[i]],
+        ])
+        return x_feat.astype(np.float32)
 
-        # return as dict
-        forecast_df = forecast.pd_dataframe()
-        result = {
-            "symbol": symbol,
-            "interval": interval,
-            "predictions": forecast_df['close'].tolist(),
-            "datetimes": forecast_df.index.tolist()
-        }
-        return result
+    def predict(self, json_data, seq_len=20) -> float:
+        # Load OHLCV từ json hoặc df
+        df_raw = load_ohlcv_from_json(json_data)
+
+        # ✅ Thêm sentiment + technical features
+        X, df = prepare_features(df_raw, add_sentiment=True)
+
+        # Lấy input_dim = số feature (không nhân seq_len)
+        input_dim = X.shape[1]
+
+        # Lấy input cuối cùng (1 vector)
+
+        # Lấy input_dim = số feature * seq_len
+        # input_dim = X.shape[1] * seq_len
+
+        # ✅ Load model + scaler nếu chưa có
+        if self.model is None or self.scaler is None:
+            self.load(input_dim)
+
+        # Scale dữ liệu
+        df_scaled = X.copy()
+        df_scaled[["close", "volume", "return", "ma", "volatility", "sentiment"]] = \
+            self.scaler.transform(df_scaled[["close", "volume", "return", "ma", "volatility", "sentiment"]])
+
+        # Lấy input cuối
+        # x_last = df_scaled.iloc[-seq_len:].to_numpy().flatten().astype(np.float32)
+        x_last = df_scaled.iloc[-1].to_numpy().astype(np.float32)
+
+        with torch.no_grad():
+            X_tensor = torch.from_numpy(x_last).unsqueeze(0).to(self.device)
+            y_pred_scaled = self.model(X_tensor).cpu().numpy().flatten()[0]
+
+        # Inverse scale giá close
+        y_pred = self.scaler.inverse_transform([[y_pred_scaled]])[0, 0]
+        return float(y_pred)
