@@ -7,18 +7,73 @@ const News = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [trendingHeadlines, setTrendingHeadlines] = useState({});
+
+  // Enhanced crawler API base URL
+  const ENHANCED_API_BASE = 'http://localhost:8001';
 
   useEffect(() => {
-    const fetchNews = async () => {
+    const fetchEnhancedNews = async () => {
       try {
         setLoading(true);
-        const response = await newsService.getNews();
-        setNews(response.data || []);
+        
+        // Fetch trending headlines first
+        const trendingResponse = await fetch(`${ENHANCED_API_BASE}/trending`);
+        if (trendingResponse.ok) {
+          const trendingData = await trendingResponse.json();
+          setTrendingHeadlines(trendingData.trending_headlines || {});
+        }
+
+        // Fetch latest news from enhanced crawler
+        const newsResponse = await fetch(`${ENHANCED_API_BASE}/news/latest?symbol=BTCUSDT&limit=20`);
+        if (newsResponse.ok) {
+          const newsData = await newsResponse.json();
+          console.log('Raw news data:', newsData); // Debug log
+          
+          // Handle different possible data structures
+          let newsArray = [];
+          if (Array.isArray(newsData.news_data)) {
+            newsArray = newsData.news_data;
+          } else if (Array.isArray(newsData.data)) {
+            newsArray = newsData.data;
+          } else if (Array.isArray(newsData)) {
+            newsArray = newsData;
+          } else if (newsData.news_data && Array.isArray(newsData.news_data.articles)) {
+            // Handle the actual API response structure
+            newsArray = newsData.news_data.articles;
+          } else {
+            console.warn('Unexpected news data structure:', newsData);
+            newsArray = [];
+          }
+          
+          // Transform enhanced news data to match existing UI structure
+          const transformedNews = newsArray.map((item, index) => {
+            console.log(`Article ${index + 1} sentiment:`, item.sentiment, typeof item.sentiment);
+            return {
+              id: index + 1,
+              title: item.title || item.headline || item.name || 'Financial News Update',
+              summary: item.summary || item.content || item.description || 'Market analysis and financial insights',
+              category: item.category || item.type || 'crypto',
+              source: item.source || item.domain || item.url || 'Financial Source',
+              publishedAt: item.published_at || item.timestamp || item.date || new Date().toISOString(),
+              image: item.image || `https://picsum.photos/300/200?random=${index}`,
+              url: item.url || item.link || item.source_url || '#',
+              sentiment: (item.sentiment && typeof item.sentiment === 'string') ? item.sentiment : 'neutral',
+              confidence: (typeof item.confidence === 'number') ? item.confidence : 0.5,
+              keywords: Array.isArray(item.keywords) ? item.keywords : (Array.isArray(item.tags) ? item.tags : [])
+            };
+          });
+          
+          setNews(transformedNews);
+          setError(null);
+        } else {
+          throw new Error(`Failed to fetch enhanced news: ${newsResponse.status}`);
+        }
       } catch (err) {
-        console.error('Error fetching news:', err);
-        setError('Failed to load news. Using sample data.');
-        // Fallback to mock data
-        setNews(generateMockNews());
+        console.error('Error fetching enhanced news:', err);
+        setError('Failed to load enhanced news. Using fallback data.');
+        // Fallback to enhanced mock data with better structure
+        setNews(generateEnhancedMockNews());
       } finally {
         setLoading(false);
       }
@@ -29,81 +84,54 @@ const News = () => {
         const response = await newsService.getNewsCategories();
         setCategories(response.data || []);
       } catch (err) {
-        console.warn('Using fallback categories:', err);
-        setCategories(['all', 'crypto', 'stocks', 'forex', 'commodities', 'economy']);
+        console.warn('Using enhanced categories:', err);
+        setCategories(['all', 'crypto', 'stocks', 'forex', 'commodities', 'economy', 'sentiment']);
       }
     };
 
-    fetchNews();
+    fetchEnhancedNews();
     fetchCategories();
   }, []);
 
-  const generateMockNews = () => [
+  const generateEnhancedMockNews = () => [
     {
       id: 1,
       title: 'Bitcoin Surges Past $50,000 as Institutional Adoption Grows',
       summary: 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021, driven by increased institutional adoption and positive market sentiment.',
       category: 'crypto',
-      source: 'CryptoNews',
-      publishedAt: '2024-01-15T10:30:00Z',
-      image: 'https://via.placeholder.com/300x200/26a69a/ffffff?text=Bitcoin',
-      url: '#',
-      sentiment: 'positive'
+      source: 'Reddit r/CryptoCurrency',
+      publishedAt: new Date().toISOString(),
+      image: 'https://picsum.photos/300/200?random=1',
+      url: 'https://reddit.com/r/CryptoCurrency',
+      sentiment: 'positive',
+      confidence: 0.85,
+      keywords: ['bitcoin', 'institutional', 'adoption']
     },
     {
       id: 2,
       title: 'Federal Reserve Signals Potential Rate Cuts in 2024',
       summary: 'The Federal Reserve has indicated a more dovish stance, suggesting potential interest rate cuts in 2024 as inflation continues to moderate.',
       category: 'economy',
-      source: 'Financial Times',
-      publishedAt: '2024-01-15T09:15:00Z',
-      image: 'https://via.placeholder.com/300x200/3b82f6/ffffff?text=Fed',
-      url: '#',
-      sentiment: 'neutral'
+      source: 'Financial Times Forum',
+      publishedAt: new Date(Date.now() - 3600000).toISOString(),
+      image: 'https://picsum.photos/300/200?random=2',
+      url: 'https://ft.com/forums',
+      sentiment: 'neutral',
+      confidence: 0.72,
+      keywords: ['federal reserve', 'interest rates', 'inflation']
     },
     {
       id: 3,
       title: 'Tech Stocks Rally on Strong Earnings Reports',
       summary: 'Major technology companies have reported strong quarterly earnings, leading to a broad rally in tech stocks and pushing major indices to new highs.',
       category: 'stocks',
-      source: 'MarketWatch',
-      publishedAt: '2024-01-15T08:45:00Z',
-      image: 'https://via.placeholder.com/300x200/10b981/ffffff?text=Tech',
-      url: '#',
-      sentiment: 'positive'
-    },
-    {
-      id: 4,
-      title: 'Oil Prices Stabilize Amid Global Supply Concerns',
-      summary: 'Oil prices have stabilized after recent volatility, as traders weigh global supply concerns against demand projections for 2024.',
-      category: 'commodities',
-      source: 'Reuters',
-      publishedAt: '2024-01-15T07:30:00Z',
-      image: 'https://via.placeholder.com/300x200/f59e0b/ffffff?text=Oil',
-      url: '#',
-      sentiment: 'neutral'
-    },
-    {
-      id: 5,
-      title: 'Ethereum Network Upgrade Shows Promising Results',
-      summary: 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees, boosting confidence in the platform.',
-      category: 'crypto',
-      source: 'CoinDesk',
-      publishedAt: '2024-01-15T06:20:00Z',
-      image: 'https://via.placeholder.com/300x200/8b5cf6/ffffff?text=Ethereum',
-      url: '#',
-      sentiment: 'positive'
-    },
-    {
-      id: 6,
-      title: 'Asian Markets Mixed as Investors Await Fed Decision',
-      summary: 'Asian markets showed mixed performance as investors remained cautious ahead of the Federal Reserve\'s upcoming policy decision.',
-      category: 'stocks',
-      source: 'Bloomberg',
-      publishedAt: '2024-01-15T05:10:00Z',
-      image: 'https://via.placeholder.com/300x200/ef4444/ffffff?text=Asia',
-      url: '#',
-      sentiment: 'neutral'
+      source: 'MarketWatch Community',
+      publishedAt: new Date(Date.now() - 7200000).toISOString(),
+      image: 'https://picsum.photos/300/200?random=3',
+      url: 'https://marketwatch.com/community',
+      sentiment: 'positive',
+      confidence: 0.91,
+      keywords: ['tech stocks', 'earnings', 'rally']
     }
   ];
 
@@ -131,6 +159,15 @@ const News = () => {
     return colors[sentiment] || colors.neutral;
   };
 
+  const getSentimentIcon = (sentiment) => {
+    const icons = {
+      positive: '📈',
+      negative: '📉',
+      neutral: '➖'
+    };
+    return icons[sentiment] || '➖';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -143,9 +180,27 @@ const News = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Financial News</h1>
-        <p className="mt-2 text-gray-600">Stay updated with the latest market news and analysis</p>
+        <h1 className="text-3xl font-bold text-gray-900">Enhanced Financial News</h1>
+        <p className="mt-2 text-gray-600">AI-powered sentiment analysis and real-time market insights</p>
       </div>
+
+      {/* Trending Headlines Section */}
+      {Object.keys(trendingHeadlines).length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-200 p-6">
+          <h2 className="text-lg font-medium text-blue-900 mb-4">🔥 Trending Headlines</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(trendingHeadlines).slice(0, 6).map(([topic, data]) => (
+              <div key={topic} className="bg-white rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-800">{topic}</span>
+                  <span className="text-xs text-blue-600">{data.count || 0} mentions</span>
+                </div>
+                <p className="text-sm text-gray-700">{data.description || 'Market trending topic'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Category Filter */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -184,9 +239,16 @@ const News = () => {
             
             <div className="p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSentimentColor(item.sentiment)}`}>
-                  {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSentimentColor(item.sentiment)}`}>
+                    {getSentimentIcon(item.sentiment)} {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
+                  </span>
+                  {item.confidence && (
+                    <span className="text-xs text-gray-500">
+                      {(item.confidence * 100).toFixed(0)}% confidence
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-gray-500">{item.source}</span>
               </div>
               
@@ -197,15 +259,33 @@ const News = () => {
               <p className="text-gray-600 text-sm mb-4 line-clamp-3">
                 {item.summary}
               </p>
+
+              {/* Keywords */}
+              {item.keywords && item.keywords.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-1">
+                    {item.keywords.slice(0, 3).map((keyword, idx) => (
+                      <span key={idx} className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">
                   {formatDate(item.publishedAt)}
                 </span>
                 
-                <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                <a 
+                  href={item.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
                   Read More →
-                </button>
+                </a>
               </div>
             </div>
           </article>
@@ -215,8 +295,11 @@ const News = () => {
       {/* Load More Button */}
       {filteredNews.length > 0 && (
         <div className="text-center">
-          <button className="px-6 py-3 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-            Load More News
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Refresh News
           </button>
         </div>
       )}

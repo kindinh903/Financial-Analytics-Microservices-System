@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout/Layout';
-import TradingInterface from './pages/TradingInterface ';
+import TradingInterface from './pages/TradingInterface';
 import Dashboard from './pages/Dashboard';
 import Charts from './pages/Charts';
 import Portfolio from './pages/Portfolio';
 import News from './pages/News';
+import Layout from './components/Layout/Layout';
 
 function App() {
   return (

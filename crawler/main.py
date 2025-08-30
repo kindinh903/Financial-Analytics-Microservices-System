@@ -11,7 +11,7 @@ import logging
 import time
 from dotenv import load_dotenv
 import pandas as pd
-import websocket
+import websockets
 import threading
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
@@ -57,7 +57,7 @@ class FinancialDataCrawler:
             self.binance_client = None
         
         # Initialize sentiment analyzer
-        self.sentiment_analyzer = vader.SentimentAnalyzer()
+        self.sentiment_analyzer = vader.SentimentIntensityAnalyzer()
         
         # Financial news sources
         self.news_sources = [
@@ -426,7 +426,7 @@ class FinancialDataCrawler:
         
         # Price data
         if 'price_data' in data:
-            df_price = pd.DataFrame(data['price_data'])
+            df_price = pd.DataFrame([data['price_data']])
             dfs.append(df_price)
         
         # Market overview
