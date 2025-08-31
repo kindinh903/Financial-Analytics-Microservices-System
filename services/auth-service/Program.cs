@@ -6,6 +6,7 @@ using System.Text;
 using AuthService.Data;
 using AuthService.Models;
 using AuthService.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,6 +74,14 @@ builder.Services.AddAuthorization();
 // Add Services
 builder.Services.AddScoped<IAuthService, AuthService.Services.AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379")
+);
+builder.Services.AddScoped<RedisCacheService>();
+
+// Add UserServiceClient
+builder.Services.AddHttpClient<UserServiceClient>();
 
 var app = builder.Build();
 

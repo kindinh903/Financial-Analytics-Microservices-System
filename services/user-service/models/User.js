@@ -28,18 +28,20 @@ const userSchema = new mongoose.Schema({
     trim: true,
     index: true
   },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    index: true
-  },
   // Role from auth service (for quick access)
   role: {
     type: String,
     enum: ['user', 'premium', 'admin'],
     default: 'user'
+  },
+  // Access permissions and feature flags
+  permissions: {
+    type: [String],
+    default: ['free']
+  },
+  features: {
+    type: [String],
+    default: ['basic-dashboard', 'news']
   },
   // Account status
   isActive: {
@@ -121,8 +123,8 @@ userSchema.statics.findByAuthId = function(authId) {
 userSchema.statics.findByEmailOrUsername = function(identifier) {
   return this.findOne({
     $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier }
+      { email: identifier.toLowerCase() }
+      // { username: identifier }
     ]
   });
 };

@@ -60,6 +60,32 @@ const validatePreferences = [
     .withMessage('SMS notifications must be a boolean')
 ];
 
+// Get user permissions/tier/features (for AuthService)
+// Route không cần xác thực JWT
+router.get('/:userId/permissions', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findOne({ authUserId: userId });
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'User does not exist'
+      });
+    }
+    res.json({
+      role: user.role || 'user',
+      permissions: user.permissions || ['free'],
+      features: user.features || ['basic-dashboard', 'news']
+    });
+  } catch (error) {
+    console.error('Get permissions error:', error);
+    res.status(500).json({
+      error: 'Failed to get permissions',
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Get user profile (current user)
 router.get('/me', async (req, res) => {
   try {

@@ -6,17 +6,13 @@ services:
     container_name: auth-service
     expose: ["8087"]         
     environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongodb:27017/financial_analytics
-      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-      - JWT_REFRESH_SECRET=your-super-secret-refresh-jwt-key-change-this-in-production
-      - REDIS_URL=redis://redis:6379
-      - FRONTEND_URL=http://localhost:3000
-      - DB_HOST=auth-db
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASSWORD=secret
-      - DB_NAME=mydb
+      - ASPNETCORE_URLS=http://+:8087
+      - ConnectionStrings__DefaultConnection=Host=auth-db;Port=5432;Database=mydb;Username=admin;Password=secret
+      - Jwt__Key=daiduongmenhmongoihoiemodauhuhuhihihehe_2025_super_secret_key_for_jwt_signing_256_bits_minimum_required
+      - Jwt__Issuer=http://auth-service:8087
+      - Jwt__Audience=http://auth-service:8087
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
     depends_on:
       - mongodb
       - redis
@@ -40,22 +36,22 @@ services:
     volumes:
       - auth-db-data:/var/lib/postgresql/data
 
-  notification-service:
-    build: ./services/notification-service
-    container_name: notification-service
-    expose: ["8086"]         
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # notification-service:
+  #   build: ./services/notification-service
+  #   container_name: notification-service
+  #   expose: ["8086"]         
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
   price-service:
     build: ./services/price-service
@@ -81,71 +77,75 @@ services:
       timeout: 3s
       retries: 3
 
-  news-service:
-    build: ./services/news-service
-    container_name: news-service
-    expose: ["8083"]        # Changed from 8082 to avoid conflict
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # news-service:
+  #   build: ./services/news-service
+  #   container_name: news-service
+  #   expose: ["8083"]        # Changed from 8082 to avoid conflict
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
-  backtest-service:
-    build: ./services/backtest-service
-    container_name: backtest-service
-    expose: ["8082"]         # Backtest service uses port 8082
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # backtest-service:
+  #   build: ./services/backtest-service
+  #   container_name: backtest-service
+  #   expose: ["8082"]         # Backtest service uses port 8082
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
-  ai-service:
-    build: ./services/ai-service
-    container_name: ai-service
-    expose: ["8084"]         
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # ai-service:
+  #   build: ./services/ai-service
+  #   container_name: ai-service
+  #   expose: ["8084"]         
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
   user-service:
     build: ./services/user-service
     container_name: user-service
-    expose: ["8085"]        
+    expose: ["8088"]        
     environment:
-      - KAFKA_BROKER=kafka:9092
+      - PORT=8088
+      - MONGODB_URI=mongodb://mongodb:27017/user_management
+      - JWT_SECRET=your-super-secret-jwt-key-here-make-it-long-and-secure
+      - KAFKA_BROKER=kafka:29092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
       - kafka
       - redis
+      - mongodb
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -159,11 +159,14 @@ services:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
     depends_on:
       - kafka
       - redis
       - auth-service
       - price-service
+      - user-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
@@ -231,6 +234,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
