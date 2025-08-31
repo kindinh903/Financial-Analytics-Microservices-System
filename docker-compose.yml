@@ -265,6 +265,25 @@ services:
       timeout: 3s
       retries: 3
 
+  crawler:
+    build: ./crawler
+    container_name: crawler
+    ports:
+      - "8000:8000"
+    environment:
+      - BINANCE_API_KEY=${BINANCE_API_KEY:-}
+      - BINANCE_SECRET_KEY=${BINANCE_SECRET_KEY:-}
+      - NEWS_API_KEY=${NEWS_API_KEY:-}
+    volumes:
+      - ./crawler/data:/app/data
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   mongodb_data:
   kafka-data:
