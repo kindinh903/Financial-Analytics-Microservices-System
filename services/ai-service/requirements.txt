@@ -1,4 +1,11 @@
 fastapi
 uvicorn
-kafka-python
-redis 
+pandas
+requests
+pydantic
+scikit-learn
+joblib
+python-dotenv
+numpy
+
+
