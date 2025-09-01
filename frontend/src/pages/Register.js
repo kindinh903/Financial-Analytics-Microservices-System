@@ -6,28 +6,36 @@ export default function Register() {
   const { register, handleSubmit } = useForm();
 
   const onSubmit = async data => {
+    if (data.password !== data.confirmPassword) {
+      alert('Mật khẩu xác nhận không khớp!');
+      return;
+    }
     try {
+        console.log('Registering user:', data);
       const response = await fetch('http://localhost:8080/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword
+          Email: data.email,
+          Password: data.password,
+          FirstName: data.firstName,
+          LastName: data.lastName,
+          ConfirmPassword: data.confirmPassword
         })
       });
-
-      if (response.ok) {
-        alert('Đăng ký thành công!');
+      console.log('Response status:', response.status);
+      const result = await response.json();
+      console.log(result);
+      if (response.ok && result.success) {
+        alert('Đăng ký thành công!\n' + result.message);
         // Có thể chuyển hướng sang trang đăng nhập ở đây
       } else {
-        const errorData = await response.json();
-        alert('Đăng ký thất bại: ' + (errorData.message || 'Có lỗi xảy ra'));
+        alert('Đăng ký thất bại:\n' + (result.message || JSON.stringify(result, null, 2)));
       }
     } catch (error) {
-      alert('Đăng ký thất bại: ' + error.message);
+      alert('Regis fail: ' + error.message);
     }
   };
 
@@ -43,6 +51,20 @@ export default function Register() {
           required
         />
         <input
+          {...register('firstName')}
+          type="text"
+          placeholder="Họ"
+          className="w-full mb-4 p-2 border rounded"
+          required
+        />
+        <input
+          {...register('lastName')}
+          type="text"
+          placeholder="Tên"
+          className="w-full mb-4 p-2 border rounded"
+          required
+        />
+        <input
           {...register('password')}
           type="password"
           placeholder="Mật khẩu"
@@ -52,7 +74,7 @@ export default function Register() {
         <input
           {...register('confirmPassword')}
           type="password"
-          placeholder="Nhập lại mật khẩu"
+          placeholder="Xác nhận mật khẩu"
           className="w-full mb-4 p-2 border rounded"
           required
         />

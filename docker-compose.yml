@@ -142,9 +142,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
-      - kafka
-      - redis
-      - mongodb
+      - kafka:
+          condition: service_healthy
+      - redis:
+          condition: service_healthy
+      - mongodb:
+          condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
       interval: 10s
@@ -232,6 +235,11 @@ services:
       - "2181:2181"
 
   kafka:
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
     depends_on:
