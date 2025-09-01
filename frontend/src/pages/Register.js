@@ -5,9 +5,30 @@ import { Link } from 'react-router-dom';
 export default function Register() {
   const { register, handleSubmit } = useForm();
 
-  const onSubmit = data => {
-    // TODO: Gọi API đăng ký ở đây
-    alert('Đăng ký thành công!');
+  const onSubmit = async data => {
+    try {
+      const response = await fetch('http://localhost:8080/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          confirmPassword: data.confirmPassword
+        })
+      });
+
+      if (response.ok) {
+        alert('Đăng ký thành công!');
+        // Có thể chuyển hướng sang trang đăng nhập ở đây
+      } else {
+        const errorData = await response.json();
+        alert('Đăng ký thất bại: ' + (errorData.message || 'Có lỗi xảy ra'));
+      }
+    } catch (error) {
+      alert('Đăng ký thất bại: ' + error.message);
+    }
   };
 
   return (

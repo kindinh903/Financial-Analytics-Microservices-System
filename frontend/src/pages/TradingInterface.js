@@ -49,7 +49,9 @@ const TradingInterface = () => {
         <div className="flex items-center gap-3">
           <span className="text-xl cursor-pointer hover:scale-110 transition-transform">🔔</span>
           <span className="text-xl cursor-pointer hover:scale-110 transition-transform">⚙️</span>
-          <span className="text-xl cursor-pointer hover:scale-110 transition-transform">👤</span>
+          <Link to="/login" className="text-xl cursor-pointer hover:scale-110 transition-transform" title="Đăng nhập">
+            👤
+          </Link>
         </div>
       </div>
 
