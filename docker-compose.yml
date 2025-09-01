@@ -112,23 +112,23 @@ services:
   #     timeout: 3s
   #     retries: 3
 
-  ai-service:
-    build: ./services/ai-service
-    container_name: ai-service
-    expose: ["8084"]         
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    depends_on:
-      - kafka
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # ai-service:
+  #   build: ./services/ai-service
+  #   container_name: ai-service
+  #   expose: ["8084"]         
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+  #   depends_on:
+  #     - kafka
+  #     - redis
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
   user-service:
     build: ./services/user-service
