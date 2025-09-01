@@ -142,12 +142,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
-      - kafka:
-          condition: service_healthy
-      - redis:
-          condition: service_healthy
-      - mongodb:
-          condition: service_healthy
+      - kafka
+      - redis
+      - mongodb
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
       interval: 10s
