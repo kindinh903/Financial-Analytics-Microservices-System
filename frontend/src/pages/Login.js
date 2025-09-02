@@ -21,6 +21,9 @@ export default function Login() {
           localStorage.setItem('accessToken', result.accessToken);
           localStorage.setItem('refreshToken', result.refreshToken);
         }
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+        }
         navigate('/'); // Chuyển hướng về trang chủ
       } else {
         alert('Đăng nhập thất bại:\n' + result.message);

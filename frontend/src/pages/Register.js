@@ -36,6 +36,10 @@ export default function Register() {
           localStorage.setItem('refreshToken', result.refreshToken);
           console.log('Access token saved');
         }
+        if (result.user) {
+        localStorage.setItem('user', JSON.stringify(result.user));
+        }
+
         navigate('/'); // Chuyển hướng về trang chủ
       } else {
         alert('Đăng ký thất bại:\n' + result.message);

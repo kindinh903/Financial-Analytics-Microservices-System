@@ -35,6 +35,7 @@ namespace AuthService.Services
                 Console.WriteLine($"Requesting user permissions for userId: {userId}");
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 if (!string.IsNullOrEmpty(userId)) request.Headers.Add("X-User-Id", userId);
+                request.Headers.Add("X-User-Role", "user");
                 if (!string.IsNullOrEmpty(email)) request.Headers.Add("X-User-Email", email);
                 if (!string.IsNullOrEmpty(firstName)) request.Headers.Add("X-User-First-Name", firstName);
                 if (!string.IsNullOrEmpty(lastName)) request.Headers.Add("X-User-Last-Name", lastName);

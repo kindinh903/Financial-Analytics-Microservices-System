@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import TradingViewWidget from 'react-tradingview-widget';
 
 const TradingInterface = () => {
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('🚀 TradingInterface component loaded!');
@@ -22,6 +23,19 @@ const TradingInterface = () => {
     setIsLoading(true);
     // Simulate loading when changing symbol
     setTimeout(() => setIsLoading(false), 1000);
+  };
+
+  // Xử lý khi bấm nút 👤
+  const handleProfileClick = () => {
+    const accessToken = localStorage.getItem('accessToken');
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!accessToken) {
+      navigate('/login');
+    } else if (user.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/profile');
+    }
   };
 
   const watchlistData = [
@@ -49,9 +63,13 @@ const TradingInterface = () => {
         <div className="flex items-center gap-3">
           <span className="text-xl cursor-pointer hover:scale-110 transition-transform">🔔</span>
           <span className="text-xl cursor-pointer hover:scale-110 transition-transform">⚙️</span>
-          <Link to="/login" className="text-xl cursor-pointer hover:scale-110 transition-transform" title="Đăng nhập">
+          <span
+            className="text-xl cursor-pointer hover:scale-110 transition-transform"
+            title="Profile"
+            onClick={handleProfileClick}
+          >
             👤
-          </Link>
+          </span>
         </div>
       </div>
 
