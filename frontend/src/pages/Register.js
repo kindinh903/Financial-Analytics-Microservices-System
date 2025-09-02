@@ -1,92 +1,56 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '../services/api';
 
 export default function Register() {
   const { register, handleSubmit } = useForm();
+  const navigate = useNavigate();
 
-const onSubmit = async data => {
-  if (data.password !== data.confirmPassword) {
-    alert('Mật khẩu xác nhận không khớp!');
-    return;
-  }
-  
-  try {
-    console.log('Registering user:', data);
-    
-    const response = await fetch('http://localhost:8080/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+  const onSubmit = async data => {
+    if (data.password !== data.confirmPassword) {
+      alert('Mật khẩu xác nhận không khớp!');
+      return;
+    }
+
+    try {
+      console.log('Registering user:', data);
+
+      const response = await authService.register({
         Email: data.email,
         Password: data.password,
         FirstName: data.firstName,
         LastName: data.lastName,
         ConfirmPassword: data.confirmPassword
-      })
-    });
-    
-    console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    // Vì status là 201 Created, response.ok sẽ là true
-    if (response.ok) {
-      const contentType = response.headers.get('content-type');
-      
-      // Đọc response as text trước
-      const textResult = await response.text();
-      console.log('Raw response text:', textResult);
-      
-      // Thử parse JSON
-      try {
-        const result = JSON.parse(textResult);
-        console.log('Parsed JSON successfully:', result);
-        
-        if (result.success !== false) {
-          alert('Đăng ký thành công!\n' + (result.message || 'Account created successfully'));
-          
-          // Lưu tokens nếu cần
-          if (result.accessToken) {
-            localStorage.setItem('accessToken', result.accessToken);
-            localStorage.setItem('refreshToken', result.refreshToken);
-            console.log('Tokens saved');
-          }
-        } else {
-          alert('Đăng ký thất bại:\n' + result.message);
+      },
+      { withCredentials: true });
+
+      // Nếu API trả về status 201 hoặc 200
+      const result = response.data;
+      console.log('API response:', result);
+
+      if (result.success !== false) {
+        alert('Đăng ký thành công!\n' + (result.message || 'Account created successfully'));
+        if (result.accessToken) {
+          localStorage.setItem('accessToken', result.accessToken);
+          localStorage.setItem('refreshToken', result.refreshToken);
+          console.log('Access token saved');
         }
-      } catch (parseError) {
-        console.log('Cannot parse JSON:', parseError);
-        console.log('Response text:', textResult);
-        
-        // Nếu status OK nhưng không parse được JSON, coi như thành công
-        alert('Đăng ký thành công! (Response không phải JSON format)');
+        navigate('/'); // Chuyển hướng về trang chủ
+      } else {
+        alert('Đăng ký thất bại:\n' + result.message);
       }
-    } else {
-      // Status không OK (4xx, 5xx)
-      const errorText = await response.text();
-      console.log('Error Response:', errorText);
-      alert('Đăng ký thất bại với status ' + response.status + ':\n' + errorText);
+    } catch (error) {
+      console.error('Catch block - Full error:', error);
+      if (error.response) {
+        alert('Đăng ký thất bại với status ' + error.response.status + ':\n' + (error.response.data?.message || error.response.data));
+      } else if (error.message.includes('Network Error')) {
+        alert('Lỗi kết nối mạng. Vui lòng kiểm tra:\n- Internet connection\n- Server có đang chạy không?\n- Firewall/Antivirus có block không?');
+      } else {
+        alert('Lỗi không xác định: ' + error.message);
+      }
     }
-    
-  } catch (error) {
-    console.error('Catch block - Full error:', error);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
-    // Chi tiết hơn về lỗi
-    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-      alert('Lỗi kết nối mạng. Vui lòng kiểm tra:\n- Internet connection\n- Server có đang chạy không?\n- Firewall/Antivirus có block không?');
-    } else if (error.name === 'SyntaxError') {
-      alert('Lỗi parsing JSON response');
-    } else {
-      alert('Lỗi không xác định: ' + error.message);
-    }
-  }
-};
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">

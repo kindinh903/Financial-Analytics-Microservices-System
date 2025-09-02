@@ -33,7 +33,7 @@ public class AuthController : ControllerBase
         }
 
         var response = await _authService.RegisterAsync(request);
-        
+
         if (response.Success)
         {
             var userEvent = new {
@@ -88,7 +88,6 @@ public class AuthController : ControllerBase
             Console.WriteLine("User permissions found in Redis cache");
         }
 
-        // Tạo enriched JWT với claims
         var claims = new Dictionary<string, object?>
         {
             ["permissions"] = userPermissions?.Permissions ?? new List<string>(),
@@ -96,7 +95,6 @@ public class AuthController : ControllerBase
             ["features"] = userPermissions?.Features ?? new List<string>()
         };
 
-        // Tạo ApplicationUser mới từ UserInfo DTO
         var appUser = new ApplicationUser {
             Id = response.User.Id,
             Email = response.User.Email,
@@ -107,7 +105,6 @@ public class AuthController : ControllerBase
         };
         var enrichedAccessToken = _jwtService.GenerateAccessToken(appUser, claims);
 
-        // Trả về JWT mới và thông tin user
         response.AccessToken = enrichedAccessToken;
         return Ok(response);
     }
@@ -214,4 +211,4 @@ public class ResetPasswordRequest
 {
     public string Token { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
-} 
+}
