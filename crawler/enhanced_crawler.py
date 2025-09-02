@@ -618,60 +618,23 @@ class EnhancedFinancialCrawler:
             return {}
     
     def export_to_excel_enhanced(self, data, filename=None):
-        """Enhanced Excel export with better formatting"""
+        """Enhanced Excel export with better formatting (simplified without pandas)"""
         if not filename:
             timestamp = int(time.time())
-            filename = f"enhanced_financial_data_{timestamp}.xlsx"
+            filename = f"enhanced_financial_data_{timestamp}.json"
         
         file_path = os.path.join(self.data_dir, filename)
         
         try:
-            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-                # News data sheet
-                if 'news_data' in data and data['news_data'].get('articles'):
-                    news_df = pd.DataFrame(data['news_data']['articles'])
-                    news_df.to_excel(writer, sheet_name='News_Data', index=False)
-                
-                # Sentiment analysis sheet
-                if 'news_data' in data and data['news_data'].get('articles'):
-                    sentiment_data = []
-                    for article in data['news_data']['articles']:
-                        sentiment = article.get('sentiment', {})
-                        sentiment_data.append({
-                            'title': article.get('title', ''),
-                            'source': article.get('source', ''),
-                            'sentiment': sentiment.get('sentiment', ''),
-                            'confidence': sentiment.get('confidence', 0),
-                            'score': sentiment.get('score', 0),
-                            'published_at': article.get('published_at', '')
-                        })
-                    
-                    if sentiment_data:
-                        sentiment_df = pd.DataFrame(sentiment_data)
-                        sentiment_df.to_excel(writer, sheet_name='Sentiment_Analysis', index=False)
-                
-                # Trending topics sheet
-                trending_data = self.get_trending_headlines()
-                if trending_data:
-                    trending_records = []
-                    for topic, info in trending_data.items():
-                        for headline in info.get('headlines', []):
-                            trending_records.append({
-                                'topic': topic,
-                                'headline': headline,
-                                'sentiment': info.get('sentiment', ''),
-                                'confidence': info.get('confidence', 0)
-                            })
-                    
-                    if trending_records:
-                        trending_df = pd.DataFrame(trending_records)
-                        trending_df.to_excel(writer, sheet_name='Trending_Topics', index=False)
+            # Since we removed pandas dependency, just export as JSON
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
             
-            logger.info(f"Enhanced financial data exported to Excel: {file_path}")
+            logger.info(f"Enhanced financial data exported to JSON: {file_path}")
             return file_path
             
         except Exception as e:
-            logger.error(f"Enhanced Excel export error: {str(e)}")
+            logger.error(f"Enhanced export error: {str(e)}")
             return None
 
     def get_binance_price(self, symbol):
@@ -899,8 +862,8 @@ async def crawl_financial_data_enhanced(symbol, include_news=True, include_indic
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(final_data, f, ensure_ascii=False, indent=4)
         
-        # Export to Excel for analysis
-        excel_path = crawler.export_to_excel_enhanced(final_data, f"{symbol.lower()}_enhanced_{int(time.time())}.xlsx")
+        # Export to JSON for analysis
+        json_path = crawler.export_to_excel_enhanced(final_data, f"{symbol.lower()}_enhanced_{int(time.time())}.json")
         
         logger.info(f"Enhanced financial data crawl completed in {time.time() - start_time:.2f} seconds")
         logger.info(f"Data saved to {file_path}")
@@ -908,7 +871,7 @@ async def crawl_financial_data_enhanced(symbol, include_news=True, include_indic
         return {
             'status': 'success',
             'file_path': file_path,
-            'excel_path': excel_path,
+            'json_path': json_path,
             'data': final_data
         }
         
@@ -927,8 +890,8 @@ if __name__ == "__main__":
         
         if result['status'] == 'success':
             print(f"Data saved to: {result['file_path']}")
-            if 'excel_path' in result and result['excel_path']:
-                print(f"Excel data saved to: {result['excel_path']}")
+            if 'json_path' in result and result['json_path']:
+                print(f"JSON data saved to: {result['json_path']}")
             
             data = result.get('data', {})
             if 'trending_headlines' in data:
