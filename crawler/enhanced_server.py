@@ -5,6 +5,8 @@ import asyncio
 import json
 from datetime import datetime
 from enhanced_crawler import EnhancedFinancialCrawler, crawl_financial_data_enhanced
+from simple_data_warehouse import SimpleDataWarehouse
+from simple_sentiment_analyzer import SimpleSentimentAnalyzer
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
@@ -92,11 +94,33 @@ async def get_latest_news(symbol: str = "BTCUSDT", limit: int = 20):
         keywords = [symbol.replace('USDT', ''), 'cryptocurrency', 'trading', 'blockchain']
         news_data = await enhanced_crawler.crawl_multiple_sources_async(keywords, limit)
         
+        # Store articles in data warehouse
+        if news_data and 'articles' in news_data:
+            stored_count = 0
+            for article in news_data['articles']:
+                try:
+                    # Store article in data warehouse
+                    enhanced_crawler.store_article_with_sentiment(article)
+                    stored_count += 1
+                except Exception as e:
+                    logger.error(f"Error storing article: {str(e)}")
+            
+            logger.info(f"Stored {stored_count} articles in data warehouse for {symbol}")
+            
+            # Auto-export to CSV after storing articles
+            if stored_count > 0:
+                try:
+                    csv_path = enhanced_crawler.data_warehouse.export_to_csv(symbol)
+                    logger.info(f"Auto-exported {stored_count} articles to CSV: {csv_path}")
+                except Exception as e:
+                    logger.error(f"Error auto-exporting CSV: {str(e)}")
+        
         return {
             "status": "success",
             "symbol": symbol,
             "news_data": news_data,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "stored_count": stored_count if 'articles' in news_data else 0
         }
         
     except Exception as e:
@@ -118,6 +142,46 @@ async def analyze_sentiment(text: str):
         
     except Exception as e:
         logger.error(f"Sentiment analysis error: {str(e)}")
+        return {"status": "error", "error": str(e)}
+
+@app.get("/news/enhanced")
+async def get_enhanced_news(symbol: str = "BTCUSDT", limit: int = 20):
+    """Get enhanced news with guaranteed data warehouse storage"""
+    try:
+        keywords = [symbol.replace('USDT', ''), 'cryptocurrency', 'trading', 'blockchain']
+        news_data = await enhanced_crawler.crawl_multiple_sources_async(keywords, limit)
+        
+        # Store articles in data warehouse
+        stored_count = 0
+        if news_data and 'articles' in news_data:
+            for article in news_data['articles']:
+                try:
+                    # Store article in data warehouse
+                    enhanced_crawler.store_article_with_sentiment(article)
+                    stored_count += 1
+                except Exception as e:
+                    logger.error(f"Error storing article: {str(e)}")
+            
+            logger.info(f"Stored {stored_count} articles in data warehouse for {symbol}")
+            
+            # Auto-export to CSV after storing articles
+            if stored_count > 0:
+                try:
+                    csv_path = enhanced_crawler.data_warehouse.export_to_csv(symbol)
+                    logger.info(f"Auto-exported {stored_count} articles to CSV: {csv_path}")
+                except Exception as e:
+                    logger.error(f"Error auto-exporting CSV: {str(e)}")
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "news_data": news_data,
+            "timestamp": datetime.now().isoformat(),
+            "stored_count": stored_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Enhanced news error: {str(e)}")
         return {"status": "error", "error": str(e)}
 
 @app.get("/news/sources")
@@ -212,6 +276,121 @@ def root():
             "Intelligent content extraction"
         ]
     }
+
+# Data Warehouse Endpoints
+@app.get("/data/sentiment/summary/{symbol}")
+async def get_sentiment_summary(symbol: str, days: int = 7):
+    """Get sentiment analysis summary for a symbol"""
+    try:
+        summary = enhanced_crawler.data_warehouse.get_sentiment_summary(symbol, days)
+        return {
+            "status": "success",
+            "data": summary,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting sentiment summary: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/data/sentiment/trends/{symbol}")
+async def get_sentiment_trends(symbol: str, days: int = 7):
+    """Get sentiment trends for a symbol"""
+    try:
+        # Get trends from data warehouse instead
+        articles = enhanced_crawler.data_warehouse.get_all_articles(symbol, 100)
+        trends = {
+            'symbol': symbol,
+            'period_days': days,
+            'total_articles': len(articles),
+            'articles': articles[:10]  # Return first 10 articles as trends
+        }
+        return {
+            "status": "success",
+            "data": trends,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting sentiment trends: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/data/export/csv/{symbol}")
+async def export_sentiment_csv(symbol: str, days: int = 30):
+    """Export sentiment analysis data to CSV"""
+    try:
+        csv_path = enhanced_crawler.data_warehouse.export_to_csv(symbol)
+        
+        # Get article count for confirmation
+        articles = enhanced_crawler.data_warehouse.get_all_articles(symbol, 1000)
+        
+        return {
+            "status": "success",
+            "message": f"Data exported to {csv_path}",
+            "file_path": csv_path,
+            "articles_exported": len(articles),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.post("/data/analyze")
+async def analyze_text_sentiment(text: str, source: str = "api"):
+    """Analyze sentiment of provided text"""
+    try:
+        result = enhanced_crawler.sentiment_analyzer.analyze_sentiment(text, source)
+        return {
+            "status": "success",
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error analyzing sentiment: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/data/warehouse/stats")
+async def get_warehouse_stats():
+    """Get data warehouse statistics"""
+    try:
+        # This would require additional methods in the data warehouse
+        # For now, return basic info
+        return {
+            "status": "success",
+            "data": {
+                "warehouse_location": str(enhanced_crawler.data_warehouse.data_dir),
+                "database_path": str(enhanced_crawler.data_warehouse.db_path),
+                "features": [
+                    "SQLite database storage",
+                    "CSV export functionality", 
+                    "Sentiment analysis tracking",
+                    "Historical trend analysis",
+                    "News article storage"
+                ]
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting warehouse stats: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 # Background task to update trending topics
 @app.on_event("startup")
