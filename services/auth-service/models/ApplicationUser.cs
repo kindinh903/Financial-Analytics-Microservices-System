@@ -21,4 +21,6 @@ public class ApplicationUser : IdentityUser
     // Password reset
     public string? PasswordResetToken { get; set; }
     public DateTime? PasswordResetExpires { get; set; }
+    // Navigation property for refresh tokens
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 } 

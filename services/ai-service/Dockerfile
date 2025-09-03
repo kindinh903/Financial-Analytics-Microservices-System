@@ -17,13 +17,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY ./app ./app
 COPY ./train ./train
-COPY ./data ./data
+COPY ./models ./models
 
 # Set environment
 ENV PYTHONUNBUFFERED=1
 
 # Expose port FastAPI
 EXPOSE 8084
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8084/health || exit 1
 
 # CMD chạy uvicorn
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8084"]

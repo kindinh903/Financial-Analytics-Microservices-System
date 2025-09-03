@@ -18,7 +18,15 @@ public class Application {
     @Bean
     public CorsWebFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*");
+        
+        // QUAN TRỌNG: Dùng specific origins thay vì wildcard
+        config.addAllowedOrigin("http://localhost:3000");  // React dev server
+        config.addAllowedOrigin("http://localhost:3001");  // Backup port
+        config.addAllowedOrigin("http://127.0.0.1:3000");  // Alternative localhost
+        
+        // Hoặc nếu cần nhiều ports khác nhau:
+        // config.addAllowedOriginPattern("http://localhost:[3000-3010]");
+        
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
         config.setAllowCredentials(true);

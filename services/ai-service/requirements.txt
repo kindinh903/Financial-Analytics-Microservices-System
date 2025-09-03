@@ -7,5 +7,7 @@ scikit-learn
 joblib
 python-dotenv
 numpy
+lightgbm
+xgboost
 
 

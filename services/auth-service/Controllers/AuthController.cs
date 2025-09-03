@@ -1,6 +1,9 @@
+using AuthService.Models;
 using Microsoft.AspNetCore.Mvc;
 using AuthService.Models.DTOs;
 using AuthService.Services;
+using AuthService.Utils;
+using AuthService.Models;
 
 namespace AuthService.Controllers;
 
@@ -9,10 +12,16 @@ namespace AuthService.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-
-    public AuthController(IAuthService authService)
+    private readonly IJwtService _jwtService;
+    private readonly KafkaPublisher _kafkaPublisher = new KafkaPublisher();
+    private readonly RedisCacheService _redisCacheService;
+    private readonly UserServiceClient _userServiceClient;
+    public AuthController(IAuthService authService, IJwtService jwtService, RedisCacheService redisCacheService, UserServiceClient userServiceClient)
     {
         _authService = authService;
+        _jwtService = jwtService;
+        _redisCacheService = redisCacheService;
+        _userServiceClient = userServiceClient;
     }
 
     [HttpPost("register")]
@@ -24,9 +33,16 @@ public class AuthController : ControllerBase
         }
 
         var response = await _authService.RegisterAsync(request);
-        
+
         if (response.Success)
         {
+            var userEvent = new {
+                authUserId = response.User.Id,
+                firstName = response.User.FirstName,
+                lastName = response.User.LastName,
+                email = response.User.Email
+            };
+            await _kafkaPublisher.PublishUserRegistered(userEvent);
             return CreatedAtAction(nameof(Register), response);
         }
 
@@ -42,13 +58,55 @@ public class AuthController : ControllerBase
         }
 
         var response = await _authService.LoginAsync(request);
-        
-        if (response.Success)
+        if (!response.Success || response.User == null)
         {
-            return Ok(response);
+            return Unauthorized(response);
         }
 
-        return Unauthorized(response);
+        // Lấy thông tin permissions/tier/features từ cache hoặc UserService
+        var userId = response.User.Id;
+        var userPermissions = await _redisCacheService.GetAsync<UserPermissionsDto>(userId);
+        if (userPermissions == null)
+        {
+            Console.WriteLine("User permissions not found in Redis cache, UserService: ", userPermissions);
+            userPermissions = await _userServiceClient.GetUserPermissionsAsync(
+                userId,
+                response.User.Email,
+                response.User.FirstName,
+                response.User.LastName
+            );
+            if (userPermissions != null)
+                await _redisCacheService.SetAsync(userId, userPermissions);
+            else
+            {
+                Console.WriteLine("User permissions not found in user service");
+                return Unauthorized(response);
+            }
+        }
+        else
+        {
+            Console.WriteLine("User permissions found in Redis cache");
+        }
+
+        var claims = new Dictionary<string, object?>
+        {
+            ["permissions"] = userPermissions?.Permissions ?? new List<string>(),
+            ["role"] = userPermissions?.Role ?? "user",
+            ["features"] = userPermissions?.Features ?? new List<string>()
+        };
+
+        var appUser = new ApplicationUser {
+            Id = response.User.Id,
+            Email = response.User.Email,
+            FirstName = response.User.FirstName,
+            LastName = response.User.LastName,
+            Role = response.User.Role,
+            IsEmailVerified = response.User.IsEmailVerified
+        };
+        var enrichedAccessToken = _jwtService.GenerateAccessToken(appUser, claims);
+
+        response.AccessToken = enrichedAccessToken;
+        return Ok(response);
     }
 
     [HttpPost("logout")]
@@ -153,4 +211,4 @@ public class ResetPasswordRequest
 {
     public string Token { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
-} 
+}

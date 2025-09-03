@@ -15,7 +15,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -32,7 +32,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized access
-      localStorage.removeItem('authToken');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -101,6 +103,22 @@ export const userService = {
 
   addToPortfolio: (portfolioItem) =>
     api.post('/api/user/portfolio', portfolioItem),
+
+  // ✅ Thêm endpoint upload avatar (nếu cần)
+  uploadAvatar: (formData) =>
+    api.post('/api/user/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+
+  // ✅ Thêm endpoint cập nhật preferences
+  updatePreferences: (preferences) =>
+    api.put('/api/user/preferences', preferences),
+
+  // ✅ Thêm endpoint cập nhật address
+  updateAddress: (address) =>
+    api.put('/api/user/address', address),
 };
 
 // News service endpoints
@@ -115,4 +133,4 @@ export const newsService = {
     api.get('/api/news/categories'),
 };
 
-export default api; 
+export default api;
