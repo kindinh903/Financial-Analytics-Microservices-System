@@ -68,20 +68,6 @@ const HomePage = () => {
               <div className="flex-1 overflow-hidden">
                 <MultiChartDashboard/>
               </div>
-
-              {/* Chart notes */}
-              <div className="p-4 bg-gray-50 text-sm flex-shrink-0">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <strong>1. Tại sao cần xem biểu đồ:</strong>
-                    <p>Biểu đồ là cửa sổ để thấy được xu hướng thị trường.</p>
-                  </div>
-                  <div>
-                    <strong>2. Biểu đồ giá:</strong>
-                    <p>Hiển thị sự thay đổi giá của tài sản theo thời gian.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
