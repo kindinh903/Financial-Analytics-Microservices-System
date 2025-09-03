@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from train.train_one import ensure_datetime, compute_technical_indicators, create_lag_features
-from app.sentiment_fng import get_fng, merge_fng_to_ohlcv
+
+from app.model_utils import load_model
 
 
 def prepare_features_for_predict(df: pd.DataFrame, feature_columns: list, seq_len: int = 20):
@@ -37,24 +38,21 @@ def predict_next_close(df: pd.DataFrame, model_dir: str = "models") -> dict:
     # fng_df = get_fng(limit=365)
     # df = merge_fng_to_ohlcv(df, fng_df)
 
-    model_dir = Path(model_dir) / f"{symbol}_{interval}"
-    model_path = model_dir / "model.pkl"
-    meta_path = model_dir / "meta.json"
-
+    model_path =Path(model_dir) / f"{symbol}_{interval}/model.pkl"
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
 
-    # Load meta.json để biết feature_columns
-    with open(meta_path, "r") as f:
-        meta = json.load(f)
+    # Load model,meta.json để biết feature_columns
+    model, meta = load_model(symbol, interval, model_dir=model_dir)
+
+
     feature_columns = meta["feature_columns"]
     seq_len = meta.get("seq_len", 20)
 
     # Feature engineering
     X_last, df_feat = prepare_features_for_predict(df, feature_columns, seq_len)
 
-    # Load model
-    model = joblib.load(model_path)
+
 
     # Predict log_return
     pred_log_return = float(model.predict(X_last)[0])
