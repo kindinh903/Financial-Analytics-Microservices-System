@@ -29,7 +29,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes - All user routes require authentication (via gateway headers)
-app.use('/api/users', authenticateToken, userRoutes);
+app.use('/api/user', authenticateToken, userRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

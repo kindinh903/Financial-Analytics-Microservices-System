@@ -15,7 +15,8 @@ import {
   Divider,
   Tag,
   Badge,
-  Tabs
+  Tabs,
+  Spin
 } from 'antd';
 import { 
   UserOutlined, 
@@ -39,6 +40,7 @@ const Profile = () => {
   const [preferencesForm] = Form.useForm();
   const [addressForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
 
@@ -46,44 +48,52 @@ const Profile = () => {
     fetchUserProfile();
   }, []);
 
+  // ✅ Gọi API thay vì đọc localStorage
   const fetchUserProfile = async () => {
+    setPageLoading(true);
     try {
-      // Lấy user từ localStorage hoặc API
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+      const response = await userService.getProfile();
+      if (response.data.success) {
+        const userData = response.data.user;
+        setUser(userData);
         
         // Set form values
         form.setFieldsValue({
-          firstName: parsedUser.firstName,
-          lastName: parsedUser.lastName,
-          email: parsedUser.email,
-          bio: parsedUser.bio,
-          phoneNumber: parsedUser.phoneNumber,
-          dateOfBirth: parsedUser.dateOfBirth ? moment(parsedUser.dateOfBirth) : null
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          bio: userData.bio,
+          phoneNumber: userData.phoneNumber,
+          dateOfBirth: userData.dateOfBirth ? moment(userData.dateOfBirth) : null
         });
 
         preferencesForm.setFieldsValue({
-          theme: parsedUser.preferences?.theme || 'light',
-          timezone: parsedUser.preferences?.timezone || 'UTC',
-          currency: parsedUser.preferences?.currency || 'USD',
-          emailNotifications: parsedUser.preferences?.notifications?.email || true,
-          pushNotifications: parsedUser.preferences?.notifications?.push || true,
-          smsNotifications: parsedUser.preferences?.notifications?.sms || false
+          theme: userData.preferences?.theme || 'light',
+          timezone: userData.preferences?.timezone || 'UTC',
+          currency: userData.preferences?.currency || 'USD',
+          emailNotifications: userData.preferences?.notifications?.email || true,
+          pushNotifications: userData.preferences?.notifications?.push || true,
+          smsNotifications: userData.preferences?.notifications?.sms || false
         });
 
         addressForm.setFieldsValue({
-          street: parsedUser.address?.street,
-          city: parsedUser.address?.city,
-          state: parsedUser.address?.state,
-          country: parsedUser.address?.country,
-          zipCode: parsedUser.address?.zipCode
+          street: userData.address?.street,
+          city: userData.address?.city,
+          state: userData.address?.state,
+          country: userData.address?.country,
+          zipCode: userData.address?.zipCode
         });
+
+        // ✅ Cập nhật localStorage với dữ liệu mới từ API
+        localStorage.setItem('user', JSON.stringify(userData));
+      } else {
+        message.error('Không thể tải thông tin người dùng');
       }
     } catch (error) {
-      message.error('Lỗi khi tải thông tin người dùng');
+      console.error('Error fetching profile:', error);
+      message.error('Lỗi khi tải thông tin: ' + (error.response?.data?.message || error.message));
     }
+    setPageLoading(false);
   };
 
   const onFinishProfile = async (values) => {
@@ -95,15 +105,15 @@ const Profile = () => {
       };
       
       const res = await userService.updateProfile(updateData);
-      if (res.data.success !== false) {
+      if (res.data.success) {
         message.success('Cập nhật thông tin cá nhân thành công!');
-        const updatedUser = { ...user, ...updateData };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        // ✅ Refresh data từ API
+        await fetchUserProfile();
       } else {
         message.error('Cập nhật thất bại: ' + res.data.message);
       }
     } catch (err) {
+      console.error('Error updating profile:', err);
       message.error('Lỗi cập nhật: ' + (err.response?.data?.message || err.message));
     }
     setLoading(false);
@@ -125,16 +135,16 @@ const Profile = () => {
         }
       };
       
+      // ✅ Gọi API update profile với preferences
       const res = await userService.updateProfile(preferencesData);
-      if (res.data.success !== false) {
+      if (res.data.success) {
         message.success('Cập nhật cài đặt thành công!');
-        const updatedUser = { ...user, ...preferencesData };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        await fetchUserProfile();
       } else {
         message.error('Cập nhật thất bại: ' + res.data.message);
       }
     } catch (err) {
+      console.error('Error updating preferences:', err);
       message.error('Lỗi cập nhật: ' + (err.response?.data?.message || err.message));
     }
     setLoading(false);
@@ -145,16 +155,16 @@ const Profile = () => {
     try {
       const addressData = { address: values };
       
+      // ✅ Gọi API update profile với address
       const res = await userService.updateProfile(addressData);
-      if (res.data.success !== false) {
+      if (res.data.success) {
         message.success('Cập nhật địa chỉ thành công!');
-        const updatedUser = { ...user, ...addressData };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        await fetchUserProfile();
       } else {
         message.error('Cập nhật thất bại: ' + res.data.message);
       }
     } catch (err) {
+      console.error('Error updating address:', err);
       message.error('Lỗi cập nhật: ' + (err.response?.data?.message || err.message));
     }
     setLoading(false);
@@ -166,13 +176,14 @@ const Profile = () => {
     
     try {
       const res = await userService.uploadAvatar(formData);
-      if (res.data.success !== false) {
+      if (res.data.success) {
         message.success('Cập nhật avatar thành công!');
-        const updatedUser = { ...user, avatar: res.data.avatarUrl };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        await fetchUserProfile();
+      } else {
+        message.error('Upload thất bại: ' + res.data.message);
       }
     } catch (err) {
+      console.error('Error uploading avatar:', err);
       message.error('Lỗi upload avatar: ' + (err.response?.data?.message || err.message));
     }
     return false; // Prevent default upload
@@ -204,12 +215,23 @@ const Profile = () => {
     return <Tag color={planColors[subscription.plan]}>{subscription.plan.toUpperCase()}</Tag>;
   };
 
+  // ✅ Loading state
+  if (pageLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Đang tải thông tin...</p>
+          <p>Không tìm thấy thông tin người dùng.</p>
+          <Button type="primary" onClick={fetchUserProfile}>
+            Thử lại
+          </Button>
         </div>
       </div>
     );

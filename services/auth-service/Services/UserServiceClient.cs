@@ -29,7 +29,7 @@ namespace AuthService.Services
             string? lastName
             )
         {
-            var url = $"{_userServiceBaseUrl}/api/users/{userId}/permissions";
+            var url = $"{_userServiceBaseUrl}/api/user/{userId}/permissions";
             try
             {
                 Console.WriteLine($"Requesting user permissions for userId: {userId}");

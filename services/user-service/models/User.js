@@ -83,6 +83,27 @@ const userSchema = new mongoose.Schema({
       default: true
     }
   },
+  // Portfolio information
+  portfolio: [{
+    symbol: {
+      type: String,
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    avgPrice: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Additional profile fields
   avatar: String,
   bio: {
@@ -129,4 +150,8 @@ userSchema.statics.findByEmailOrUsername = function(identifier) {
   });
 };
 
-module.exports = mongoose.model('User', userSchema); 
+// Add index for better performance
+userSchema.index({ 'portfolio.symbol': 1 });
+userSchema.index({ email: 1, isActive: 1 });
+
+module.exports = mongoose.model('User', userSchema);
