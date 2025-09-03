@@ -8,6 +8,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import warnings
+from app.config import settings
 
 MODEL_DIR = Path("./models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -135,6 +136,15 @@ def prepare_features_and_target(df: pd.DataFrame, seq_len=20):
     df = compute_technical_indicators(df)
     df = create_lag_features(df, seq_len=seq_len, use_close_lags=True)
 
+    # Clean extreme values
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df.fillna(0)   # hoặc df.dropna() nếu muốn bỏ hàng lỗi
+
+    # Optionally, clip toàn bộ feature về [-1e6, 1e6] để tránh float32 overflow
+    for col in df.columns:
+        if df[col].dtype.kind in "fc":  # float or complex
+            df[col] = df[col].clip(-1e6, 1e6)
+            
     # target = next log return
     df["target"] = df["log_close"].shift(-1) - df["log_close"]
 
@@ -230,12 +240,15 @@ def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
     y_test_prices = last_closes_test * np.exp(y_test)
     y_pred_prices = last_closes_test * np.exp(y_pred_test_lr)
 
-    rmse = mean_squared_error(y_test_prices, y_pred_prices, squared=False)
+    rmse = mean_squared_error(y_test_prices, y_pred_prices)
     mae = mean_absolute_error(y_test_prices, y_pred_prices)
     print(f"[{symbol}-{interval}] Test RMSE (price) = {rmse:.6f}, MAE = {mae:.6f}")
 
     # Save model + metadata
-    out_dir = MODEL_DIR / f"{symbol}_{interval}"
+    # out_dir = MODEL_DIR / f"{symbol}_{interval}"
+    interval_safe = settings.interval_map.get(interval, interval)
+    out_dir = MODEL_DIR / f"{symbol}_{interval_safe}"
+
     out_dir.mkdir(parents=True, exist_ok=True)
     model_path = out_dir / "model.pkl"
     meta_path = out_dir / "meta.json"

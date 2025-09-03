@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from train.train_one import ensure_datetime, compute_technical_indicators, create_lag_features
+from app.sentiment_fng import get_fng, merge_fng_to_ohlcv
+from app.model_utils import load_model
+from app.config import settings
 
 
 def prepare_features_for_predict(df: pd.DataFrame, feature_columns: list, seq_len: int = 20):
@@ -20,6 +23,14 @@ def prepare_features_for_predict(df: pd.DataFrame, feature_columns: list, seq_le
 
     df = compute_technical_indicators(df)
     df = create_lag_features(df, seq_len=seq_len, use_close_lags=True)
+     # Clean extreme values
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df.fillna(0)   # hoặc df.dropna() nếu muốn bỏ hàng lỗi
+
+    # Optionally, clip toàn bộ feature về [-1e6, 1e6] để tránh float32 overflow
+    for col in df.columns:
+        if df[col].dtype.kind in "fc":  # float or complex
+            df[col] = df[col].clip(-1e6, 1e6)
 
     # lấy hàng cuối cùng không NaN
     candidate = df[feature_columns].dropna().tail(1)
@@ -33,24 +44,26 @@ def predict_next_close(df: pd.DataFrame, model_dir: str = "models") -> dict:
     symbol = df["symbol"].iloc[0]
     interval = df["interval"].iloc[0]
 
-    model_dir = Path(model_dir) / f"{symbol}_{interval}"
-    model_path = model_dir / "model.pkl"
-    meta_path = model_dir / "meta.json"
+    fng_df = get_fng(limit=365)
+    df = merge_fng_to_ohlcv(df, fng_df)
+    interval_safe = settings.interval_map.get(interval, interval)
 
+
+    model_path =Path(model_dir) / f"{symbol}_{interval_safe}/model.pkl"
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
 
-    # Load meta.json để biết feature_columns
-    with open(meta_path, "r") as f:
-        meta = json.load(f)
+    # Load model,meta.json để biết feature_columns
+    model, meta = load_model(symbol, interval_safe, model_dir=model_dir)
+
+
     feature_columns = meta["feature_columns"]
     seq_len = meta.get("seq_len", 20)
 
     # Feature engineering
     X_last, df_feat = prepare_features_for_predict(df, feature_columns, seq_len)
 
-    # Load model
-    model = joblib.load(model_path)
+
 
     # Predict log_return
     pred_log_return = float(model.predict(X_last)[0])

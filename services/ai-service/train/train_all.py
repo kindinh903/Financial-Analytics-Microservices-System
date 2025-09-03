@@ -5,14 +5,17 @@ from app.config import settings
 from app.sentiment_fng import get_fng, merge_fng_to_ohlcv
 from train.train_one import train_one
 from train.fetch_data import fetch_binance_kline  # bạn tách hàm fetch_binance_kline sang file riêng
-
+from app.config import settings
 
 DATA_DIR = Path(os.getenv("DATA_PATH", "./data/hist"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def save_csv(symbol: str, interval: str, df: pd.DataFrame) -> Path:
-    path = DATA_DIR / f"{symbol}_{interval}.csv"
+    # Map interval sang tên chuẩn để tránh ghi đè
+    safe_interval = settings.interval_map.get(interval, interval.lower())
+
+    path = DATA_DIR / f"{symbol}_{safe_interval}.csv"
     df.to_csv(path, index=False)
     return path
 

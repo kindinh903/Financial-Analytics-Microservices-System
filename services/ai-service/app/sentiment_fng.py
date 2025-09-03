@@ -31,6 +31,32 @@ def fetch_fng_raw(limit: int = 1000):
     df = pd.DataFrame(rows).sort_values("datetime").reset_index(drop=True)
     return df
 
+def fetch_fng_internal(symbol: str = "BTCUSDT", days: int = 365):
+    """Fetch FNG-style data từ sentiment service nội bộ.
+       Trả DataFrame ['datetime','fng','fng_class'] hoặc None nếu fail.
+    """
+    try:
+        url = f"http://localhost:8001/data/sentiment/summary/{symbol}?days={days}"
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+
+        if not data or data.get("total_articles", 0) == 0:
+            return None
+
+        dt = pd.to_datetime(data.get("analyzed_at", datetime.utcnow().isoformat()))
+        fng = float(data.get("average_confidence", 0.0)) * 100.0
+
+        df = pd.DataFrame([{
+            "datetime": dt,
+            "fng": fng,
+            "fng_class": map_fng_class(fng)
+        }])
+        return df
+    except Exception as e:
+        print(f"[WARN] Internal sentiment service failed: {e}")
+        return None
+
 def load_fng_cache():
     if settings.CACHE_PATH.exists():
         mtime = datetime.utcfromtimestamp(settings.CACHE_PATH.stat().st_mtime)
@@ -43,14 +69,35 @@ def save_fng_cache(df: pd.DataFrame):
     df.to_csv(settings.CACHE_PATH, index=False)
 
 def get_fng(limit: int = 1000, refresh: bool = False):
-    """Return FNG DataFrame (cached)."""
+    """Return FNG DataFrame (cached), ưu tiên internal service -> external API."""
     if not refresh:
         cached = load_fng_cache()
         if cached is not None:
             return cached
+
+    # # ✅ Ưu tiên internal
+    # internal_df = fetch_fng_internal(days=limit)
+    # if internal_df is not None:
+    #     save_fng_cache(internal_df)
+    #     return internal_df
+
+    # ✅ Fallback external (giữ nguyên logic cũ)
     df = fetch_fng_raw(limit)
     save_fng_cache(df)
     return df
+
+def map_fng_class(fng: float) -> str:
+    if fng <= 24:
+        return "Extreme Fear"
+    elif fng <= 49:
+        return "Fear"
+    elif fng <= 54:
+        return "Neutral"
+    elif fng <= 74:
+        return "Greed"
+    else:
+        return "Extreme Greed"
+
 
 def merge_fng_to_ohlcv(ohlcv_df: pd.DataFrame, fng_df: pd.DataFrame = None, normalize: bool = True):
     df = ohlcv_df.copy()
