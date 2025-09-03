@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from train.train_one import ensure_datetime, compute_technical_indicators, create_lag_features
-
+from app.sentiment_fng import get_fng, merge_fng_to_ohlcv
 from app.model_utils import load_model
 
 
@@ -35,8 +35,8 @@ def predict_next_close(df: pd.DataFrame, model_dir: str = "models") -> dict:
     symbol = df["symbol"].iloc[0]
     interval = df["interval"].iloc[0]
 
-    # fng_df = get_fng(limit=365)
-    # df = merge_fng_to_ohlcv(df, fng_df)
+    fng_df = get_fng(limit=365)
+    df = merge_fng_to_ohlcv(df, fng_df)
 
     model_path =Path(model_dir) / f"{symbol}_{interval}/model.pkl"
     if not model_path.exists():

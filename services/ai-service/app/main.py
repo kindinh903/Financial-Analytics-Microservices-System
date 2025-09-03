@@ -25,6 +25,10 @@ def predict(request: OHLCVRequest):
         if "symbol" not in df.columns or "interval" not in df.columns:
             raise HTTPException(status_code=400, detail="Thiếu symbol hoặc interval trong dữ liệu")
 
+        # Bổ sung datetime từ timestamp nếu thiếu
+        if "datetime" not in df.columns and "close_time" in df.columns:
+            df["datetime"] = pd.to_datetime(df["close_time"], unit="ms")
+
         result = predict_next_close(df, request.model_dir)
         return {"status": "success", "result": result}
 
