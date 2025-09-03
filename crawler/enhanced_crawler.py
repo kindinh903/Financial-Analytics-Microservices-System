@@ -16,7 +16,7 @@ from nltk.tokenize import word_tokenize
 import logging
 import time
 from dotenv import load_dotenv
-import pandas as pd
+# import pandas as pd  # Not needed with simple data warehouse
 import websockets
 import threading
 from binance.client import Client
@@ -29,6 +29,10 @@ import aiohttp
 from urllib.parse import urljoin, urlparse
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Import our simple data warehouse and sentiment analyzer
+from simple_data_warehouse import SimpleDataWarehouse
+from simple_sentiment_analyzer import SimpleSentimentAnalyzer
 
 # Load environment variables
 load_dotenv()
@@ -68,8 +72,12 @@ class EnhancedFinancialCrawler:
             logger.error(f"Failed to initialize Binance client: {str(e)}")
             self.binance_client = None
         
-        # Initialize sentiment analyzer
-        self.sentiment_analyzer = vader.SentimentIntensityAnalyzer()
+        # Initialize simple data warehouse and sentiment analyzer
+        self.data_warehouse = SimpleDataWarehouse()
+        self.sentiment_analyzer = SimpleSentimentAnalyzer(self.data_warehouse)
+        
+        # Legacy sentiment analyzer for backward compatibility
+        self.legacy_sentiment_analyzer = vader.SentimentIntensityAnalyzer()
         
         # Enhanced financial news sources with structure analysis
         self.news_sources = {
@@ -251,7 +259,7 @@ class EnhancedFinancialCrawler:
                 return self.sentiment_cache[text_hash]
             
             # VADER for financial text (better for social media/news)
-            vader_scores = self.sentiment_analyzer.polarity_scores(text)
+            vader_scores = self.legacy_sentiment_analyzer.polarity_scores(text)
             
             # TextBlob for general sentiment
             blob = TextBlob(text)
@@ -259,9 +267,9 @@ class EnhancedFinancialCrawler:
             
             # Financial-specific keyword analysis
             financial_keywords = {
-                'positive': ['bull', 'bullish', 'surge', 'rally', 'gain', 'profit', 'growth', 'adoption', 'upgrade', 'success'],
-                'negative': ['bear', 'bearish', 'crash', 'drop', 'loss', 'decline', 'risk', 'concern', 'warning', 'failure'],
-                'neutral': ['stable', 'maintain', 'hold', 'consolidate', 'sideways', 'range']
+                'positive': ['bull', 'bullish', 'surge', 'rally', 'gain', 'profit', 'growth', 'adoption', 'upgrade', 'success', 'high', 'moon', 'rocket', 'explode', 'breakthrough'],
+                'negative': ['bear', 'bearish', 'crash', 'drop', 'loss', 'decline', 'risk', 'concern', 'warning', 'failure', 'fall', 'dump', 'sell', 'panic', 'fear'],
+                'neutral': ['stable', 'maintain', 'hold', 'consolidate', 'sideways', 'range', 'steady', 'flat']
             }
             
             # Count financial keywords
@@ -273,28 +281,30 @@ class EnhancedFinancialCrawler:
             }
             
             # Calculate keyword-adjusted sentiment
-            keyword_adjustment = (keyword_scores['positive'] - keyword_scores['negative']) * 0.1
+            keyword_adjustment = (keyword_scores['positive'] - keyword_scores['negative']) * 0.2
             
             # Combine VADER and keyword analysis
             compound_score = vader_scores['compound'] + keyword_adjustment
             compound_score = max(-1.0, min(1.0, compound_score))  # Clamp to [-1, 1]
             
-            # Determine overall sentiment
-            if compound_score >= 0.05:
+            # Determine overall sentiment with better thresholds
+            if compound_score >= 0.1:
                 overall_sentiment = 'positive'
-            elif compound_score <= -0.05:
+            elif compound_score <= -0.1:
                 overall_sentiment = 'negative'
             else:
                 overall_sentiment = 'neutral'
             
+            # Always use our calculated values for now (more reliable)
             result = {
                 'sentiment': overall_sentiment,
-                'confidence': abs(compound_score),
+                'confidence': min(0.95, abs(compound_score) + 0.3),  # Boost confidence
                 'score': compound_score,
                 'vader_scores': vader_scores,
                 'textblob_sentiment': textblob_sentiment,
                 'keyword_scores': keyword_scores,
-                'keyword_adjustment': keyword_adjustment
+                'keyword_adjustment': keyword_adjustment,
+                'analysis_method': 'enhanced_vader_keyword'
             }
             
             # Cache the result
@@ -305,6 +315,62 @@ class EnhancedFinancialCrawler:
             logger.error(f"Enhanced sentiment analysis error: {str(e)}")
             return {'sentiment': 'neutral', 'confidence': 0.0, 'score': 0.0, 'error': str(e)}
     
+    def store_article_with_sentiment(self, article_data):
+        """Store article and its sentiment analysis in the data warehouse"""
+        try:
+            # Analyze sentiment
+            text_for_analysis = article_data.get('content', '') or article_data.get('summary', '') or article_data.get('title', '')
+            sentiment_result = self.analyze_sentiment_enhanced(text_for_analysis)
+            
+            # Store in data warehouse directly
+            article_data_for_storage = {
+                'title': article_data.get('title', ''),
+                'content': article_data.get('content', ''),
+                'summary': article_data.get('description', ''),
+                'source': article_data.get('source', 'unknown'),
+                'url': article_data.get('url', ''),
+                'published_at': article_data.get('published_at', datetime.now().isoformat()),
+                'symbol': 'BTCUSDT'  # Default symbol
+            }
+            
+            stored_article_id = self.data_warehouse.store_news_article(article_data_for_storage)
+            
+            # Store sentiment analysis
+            if stored_article_id:
+                sentiment_data_for_storage = {
+                    'text': text_for_analysis,
+                    'sentiment_label': sentiment_result['sentiment'],
+                    'sentiment_score': sentiment_result['score'],
+                    'confidence': sentiment_result['confidence'],
+                    'positive_score': sentiment_result.get('vader_scores', {}).get('pos', 0.0),
+                    'negative_score': sentiment_result.get('vader_scores', {}).get('neg', 0.0),
+                    'neutral_score': sentiment_result.get('vader_scores', {}).get('neu', 0.0),
+                    'compound_score': sentiment_result.get('vader_scores', {}).get('compound', 0.0),
+                    'keywords': list(sentiment_result.get('keyword_scores', {}).keys()),
+                    'analysis_method': sentiment_result.get('analysis_method', 'enhanced')
+                }
+                
+                self.data_warehouse.store_sentiment_analysis(stored_article_id, sentiment_data_for_storage)
+            
+            # Add sentiment data to article
+            article_data['sentiment'] = sentiment_result['sentiment']
+            article_data['confidence'] = sentiment_result['confidence']
+            article_data['sentiment_score'] = sentiment_result['score']
+            article_data['keywords'] = list(sentiment_result.get('keyword_scores', {}).keys()) if sentiment_result.get('keyword_scores') else []
+            article_data['analysis_method'] = sentiment_result.get('analysis_method', 'enhanced')
+            
+            return article_data
+            
+        except Exception as e:
+            logger.error(f"Error storing article with sentiment: {str(e)}")
+            # Return article with default sentiment
+            article_data['sentiment'] = 'neutral'
+            article_data['confidence'] = 0.0
+            article_data['sentiment_score'] = 0.0
+            article_data['keywords'] = []
+            article_data['analysis_method'] = 'error_fallback'
+            return article_data
+
     async def crawl_multiple_sources_async(self, keywords, max_articles=50):
         """Crawl multiple financial news sources asynchronously"""
         try:
@@ -342,19 +408,31 @@ class EnhancedFinancialCrawler:
                 for result in results:
                     if isinstance(result, dict) and result.get('success', False):
                         all_articles.append(result)
+                    elif isinstance(result, Exception):
+                        logger.error(f"Crawling task failed: {str(result)}")
             
             # Add manual news as fallback
             if len(all_articles) < max_articles:
                 manual_news = self.get_manual_news_enhanced(keywords)
                 all_articles.extend(manual_news)
             
+            # Store articles in data warehouse and enhance with sentiment
+            enhanced_articles = []
+            for article in all_articles:
+                try:
+                    enhanced_article = self.store_article_with_sentiment(article)
+                    enhanced_articles.append(enhanced_article)
+                except Exception as e:
+                    logger.error(f"Error enhancing article: {str(e)}")
+                    enhanced_articles.append(article)
+            
             # Sort by sentiment confidence and limit results
-            all_articles.sort(key=lambda x: x.get('sentiment', {}).get('confidence', 0), reverse=True)
+            enhanced_articles.sort(key=lambda x: x.get('sentiment', {}).get('confidence', 0) if isinstance(x.get('sentiment'), dict) else 0, reverse=True)
             
             return {
                 'source': 'enhanced_crawler',
-                'articles': all_articles[:max_articles],
-                'total_results': len(all_articles),
+                'articles': enhanced_articles[:max_articles],
+                'total_results': len(enhanced_articles),
                 'crawled_at': datetime.now().isoformat()
             }
             
@@ -402,6 +480,15 @@ class EnhancedFinancialCrawler:
                                     'crawled_at': datetime.now().isoformat()
                                 })
                             
+                                                         # Store articles in data warehouse
+                            for article in articles:
+                                try:
+                                    enhanced_article = self.store_article_with_sentiment(article)
+                                    # Update the article with enhanced data
+                                    article.update(enhanced_article)
+                                except Exception as e:
+                                    logger.error(f"Error enhancing NewsAPI article: {str(e)}")
+                            
                             return articles
             
             return []
@@ -417,40 +504,58 @@ class EnhancedFinancialCrawler:
             sample_news = [
                 {
                     'title': 'Bitcoin Surges Past $50,000 as Institutional Adoption Grows',
-                    'description': 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021.',
-                    'content': 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021, driven by increased institutional adoption and positive market sentiment.',
-                    'url': 'https://example.com/bitcoin-surge',
-                    'source': 'Financial News',
-                    'published_at': datetime.now().isoformat(),
-                    'sentiment': self.analyze_sentiment_enhanced('Bitcoin Surges Past $50,000 as Institutional Adoption Grows')
-                },
-                {
-                    'title': 'Ethereum Network Upgrade Shows Promising Results',
-                    'description': 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees.',
-                    'content': 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees, boosting confidence in the platform.',
-                    'url': 'https://example.com/ethereum-upgrade',
-                    'source': 'Crypto News',
-                    'published_at': datetime.now().isoformat(),
-                    'sentiment': self.analyze_sentiment_enhanced('Ethereum Network Upgrade Shows Promising Results')
-                },
-                {
-                    'title': 'Market Volatility Increases Amid Economic Uncertainty',
-                    'description': 'Global markets face increased volatility as economic indicators show mixed signals.',
-                    'content': 'Global markets face increased volatility as economic indicators show mixed signals, with investors seeking safe havens.',
-                    'url': 'https://example.com/market-volatility',
-                    'source': 'Market Analysis',
-                    'published_at': datetime.now().isoformat(),
-                    'sentiment': self.analyze_sentiment_enhanced('Market Volatility Increases Amid Economic Uncertainty')
-                },
-                {
-                    'title': 'DeFi Protocols Show Strong Growth in Q4',
-                    'description': 'Decentralized finance protocols continue to expand with innovative lending and yield farming solutions.',
-                    'content': 'Decentralized finance protocols continue to expand with innovative lending and yield farming solutions, attracting significant capital inflows.',
-                    'url': 'https://example.com/defi-growth',
-                    'source': 'DeFi News',
-                    'published_at': datetime.now().isoformat(),
-                    'sentiment': self.analyze_sentiment_enhanced('DeFi Protocols Show Strong Growth in Q4')
-                }
+                     'description': 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021.',
+                     'content': 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021, driven by increased institutional adoption and positive market sentiment.',
+                     'url': 'https://example.com/bitcoin-surge',
+                     'source': 'Financial News',
+                     'published_at': datetime.now().isoformat(),
+                     'sentiment': self.analyze_sentiment_enhanced('Bitcoin Surges Past $50,000 as Institutional Adoption Grows')
+                 },
+                 {
+                     'title': 'Ethereum Network Upgrade Shows Promising Results',
+                     'description': 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees.',
+                     'content': 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees, boosting confidence in the platform.',
+                     'url': 'https://example.com/ethereum-upgrade',
+                     'source': 'Crypto News',
+                     'published_at': datetime.now().isoformat(),
+                     'sentiment': self.analyze_sentiment_enhanced('Ethereum Network Upgrade Shows Promising Results')
+                 },
+                 {
+                     'title': 'Crypto Market Crashes Amid Regulatory Fears',
+                     'description': 'Global crypto markets face significant decline as regulatory uncertainty spreads across major economies.',
+                     'content': 'Global crypto markets face significant decline as regulatory uncertainty spreads across major economies, causing panic selling among investors.',
+                     'url': 'https://example.com/market-crash',
+                     'source': 'Market Analysis',
+                     'published_at': datetime.now().isoformat(),
+                     'sentiment': self.analyze_sentiment_enhanced('Crypto Market Crashes Amid Regulatory Fears')
+                 },
+                 {
+                     'title': 'DeFi Protocols Show Strong Growth in Q4',
+                     'description': 'Decentralized finance protocols continue to expand with innovative lending and yield farming solutions.',
+                     'content': 'Decentralized finance protocols continue to expand with innovative lending and yield farming solutions, attracting significant capital inflows.',
+                     'url': 'https://example.com/defi-growth',
+                     'source': 'DeFi News',
+                     'published_at': datetime.now().isoformat(),
+                     'sentiment': self.analyze_sentiment_enhanced('DeFi Protocols Show Strong Growth in Q4')
+                 },
+                 {
+                     'title': 'Bitcoin Reaches New All-Time High of $100,000',
+                     'description': 'Bitcoin has achieved a historic milestone, reaching $100,000 for the first time ever.',
+                     'content': 'Bitcoin has achieved a historic milestone, reaching $100,000 for the first time ever, driven by massive institutional adoption and mainstream acceptance.',
+                     'url': 'https://example.com/bitcoin-ath',
+                     'source': 'Crypto News',
+                     'published_at': datetime.now().isoformat(),
+                     'sentiment': self.analyze_sentiment_enhanced('Bitcoin Reaches New All-Time High of $100,000')
+                 },
+                 {
+                     'title': 'Major Exchange Faces Security Breach',
+                     'description': 'A leading cryptocurrency exchange has reported a significant security breach affecting thousands of users.',
+                     'content': 'A leading cryptocurrency exchange has reported a significant security breach affecting thousands of users, raising concerns about platform security.',
+                     'url': 'https://example.com/security-breach',
+                     'source': 'Security News',
+                     'published_at': datetime.now().isoformat(),
+                     'sentiment': self.analyze_sentiment_enhanced('Major Exchange Faces Security Breach')
+                 }
             ]
             
             return sample_news
@@ -513,60 +618,23 @@ class EnhancedFinancialCrawler:
             return {}
     
     def export_to_excel_enhanced(self, data, filename=None):
-        """Enhanced Excel export with better formatting"""
+        """Enhanced Excel export with better formatting (simplified without pandas)"""
         if not filename:
             timestamp = int(time.time())
-            filename = f"enhanced_financial_data_{timestamp}.xlsx"
+            filename = f"enhanced_financial_data_{timestamp}.json"
         
         file_path = os.path.join(self.data_dir, filename)
         
         try:
-            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-                # News data sheet
-                if 'news_data' in data and data['news_data'].get('articles'):
-                    news_df = pd.DataFrame(data['news_data']['articles'])
-                    news_df.to_excel(writer, sheet_name='News_Data', index=False)
-                
-                # Sentiment analysis sheet
-                if 'news_data' in data and data['news_data'].get('articles'):
-                    sentiment_data = []
-                    for article in data['news_data']['articles']:
-                        sentiment = article.get('sentiment', {})
-                        sentiment_data.append({
-                            'title': article.get('title', ''),
-                            'source': article.get('source', ''),
-                            'sentiment': sentiment.get('sentiment', ''),
-                            'confidence': sentiment.get('confidence', 0),
-                            'score': sentiment.get('score', 0),
-                            'published_at': article.get('published_at', '')
-                        })
-                    
-                    if sentiment_data:
-                        sentiment_df = pd.DataFrame(sentiment_data)
-                        sentiment_df.to_excel(writer, sheet_name='Sentiment_Analysis', index=False)
-                
-                # Trending topics sheet
-                trending_data = self.get_trending_headlines()
-                if trending_data:
-                    trending_records = []
-                    for topic, info in trending_data.items():
-                        for headline in info.get('headlines', []):
-                            trending_records.append({
-                                'topic': topic,
-                                'headline': headline,
-                                'sentiment': info.get('sentiment', ''),
-                                'confidence': info.get('confidence', 0)
-                            })
-                    
-                    if trending_records:
-                        trending_df = pd.DataFrame(trending_records)
-                        trending_df.to_excel(writer, sheet_name='Trending_Topics', index=False)
+            # Since we removed pandas dependency, just export as JSON
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
             
-            logger.info(f"Enhanced financial data exported to Excel: {file_path}")
+            logger.info(f"Enhanced financial data exported to JSON: {file_path}")
             return file_path
             
         except Exception as e:
-            logger.error(f"Enhanced Excel export error: {str(e)}")
+            logger.error(f"Enhanced export error: {str(e)}")
             return None
 
     def get_binance_price(self, symbol):
@@ -794,8 +862,8 @@ async def crawl_financial_data_enhanced(symbol, include_news=True, include_indic
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(final_data, f, ensure_ascii=False, indent=4)
         
-        # Export to Excel for analysis
-        excel_path = crawler.export_to_excel_enhanced(final_data, f"{symbol.lower()}_enhanced_{int(time.time())}.xlsx")
+        # Export to JSON for analysis
+        json_path = crawler.export_to_excel_enhanced(final_data, f"{symbol.lower()}_enhanced_{int(time.time())}.json")
         
         logger.info(f"Enhanced financial data crawl completed in {time.time() - start_time:.2f} seconds")
         logger.info(f"Data saved to {file_path}")
@@ -803,7 +871,7 @@ async def crawl_financial_data_enhanced(symbol, include_news=True, include_indic
         return {
             'status': 'success',
             'file_path': file_path,
-            'excel_path': excel_path,
+            'json_path': json_path,
             'data': final_data
         }
         
@@ -822,8 +890,8 @@ if __name__ == "__main__":
         
         if result['status'] == 'success':
             print(f"Data saved to: {result['file_path']}")
-            if 'excel_path' in result and result['excel_path']:
-                print(f"Excel data saved to: {result['excel_path']}")
+            if 'json_path' in result and result['json_path']:
+                print(f"JSON data saved to: {result['json_path']}")
             
             data = result.get('data', {})
             if 'trending_headlines' in data:

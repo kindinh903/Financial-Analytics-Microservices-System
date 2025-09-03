@@ -8,14 +8,19 @@ const News = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [trendingHeadlines, setTrendingHeadlines] = useState({});
+  const [warehouseStats, setWarehouseStats] = useState(null);
 
   // Enhanced crawler API base URL
-  const ENHANCED_API_BASE = 'http://localhost:8001';
+  // Use host.docker.internal for Docker containers, localhost for direct access
+  const ENHANCED_API_BASE = process.env.NODE_ENV === 'production' 
+    ? 'http://host.docker.internal:8001' 
+    : 'http://localhost:8001';
 
   useEffect(() => {
     const fetchEnhancedNews = async () => {
       try {
         setLoading(true);
+        console.log(`🔗 Using API base URL: ${ENHANCED_API_BASE}`);
         
         // Fetch trending headlines first
         const trendingResponse = await fetch(`${ENHANCED_API_BASE}/trending`);
@@ -25,7 +30,7 @@ const News = () => {
         }
 
         // Fetch latest news from enhanced crawler
-        const newsResponse = await fetch(`${ENHANCED_API_BASE}/news/latest?symbol=BTCUSDT&limit=20`);
+        const newsResponse = await fetch(`${ENHANCED_API_BASE}/news/enhanced?symbol=BTCUSDT&limit=20`);
         if (newsResponse.ok) {
           const newsData = await newsResponse.json();
           console.log('Raw news data:', newsData); // Debug log
@@ -66,6 +71,11 @@ const News = () => {
           
           setNews(transformedNews);
           setError(null);
+          
+          // Show storage confirmation if available
+          if (newsData.stored_count !== undefined) {
+            console.log(`✅ Stored ${newsData.stored_count} articles in data warehouse`);
+          }
         } else {
           throw new Error(`Failed to fetch enhanced news: ${newsResponse.status}`);
         }
@@ -89,8 +99,21 @@ const News = () => {
       }
     };
 
+    const fetchWarehouseStats = async () => {
+      try {
+        const response = await fetch(`${ENHANCED_API_BASE}/data/warehouse/stats`);
+        if (response.ok) {
+          const stats = await response.json();
+          setWarehouseStats(stats.data);
+        }
+      } catch (err) {
+        console.warn('Could not fetch warehouse stats:', err);
+      }
+    };
+
     fetchEnhancedNews();
     fetchCategories();
+    fetchWarehouseStats();
   }, []);
 
   const generateEnhancedMockNews = () => [
@@ -182,6 +205,24 @@ const News = () => {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Enhanced Financial News</h1>
         <p className="mt-2 text-gray-600">AI-powered sentiment analysis and real-time market insights</p>
+        
+        {/* Data Warehouse Status */}
+        <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="text-green-400 mr-3">🗄️</div>
+            <div>
+              <p className="text-sm font-medium text-green-800">Data Warehouse Active</p>
+              <p className="text-sm text-green-700">
+                News articles are being stored with sentiment analysis in SQLite database
+                {warehouseStats && (
+                  <span className="ml-2 text-green-600">
+                    • Database: {warehouseStats.database_path?.split('/').pop() || 'financial_data.db'}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Trending Headlines Section */}
@@ -296,7 +337,23 @@ const News = () => {
       {filteredNews.length > 0 && (
         <div className="text-center">
           <button 
-            onClick={() => window.location.reload()}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                const response = await fetch(`${ENHANCED_API_BASE}/news/enhanced?symbol=BTCUSDT&limit=20&force_refresh=true`);
+                if (response.ok) {
+                  const data = await response.json();
+                  if (data.stored_count !== undefined) {
+                    alert(`✅ Refreshed and stored ${data.stored_count} new articles in data warehouse!`);
+                  }
+                  fetchEnhancedNews(); // Refresh the display
+                }
+              } catch (error) {
+                console.error('Error refreshing news:', error);
+              } finally {
+                setLoading(false);
+              }
+            }}
             className="px-6 py-3 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Refresh News

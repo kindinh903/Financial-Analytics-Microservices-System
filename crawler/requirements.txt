@@ -1,7 +1,6 @@
 # Core dependencies
 requests>=2.31.0
 beautifulsoup4>=4.12.0
-pandas>=2.0.0
 python-dotenv>=1.0.0
 
 # Financial data APIs
@@ -13,15 +12,27 @@ nltk>=3.8.1
 textblob>=0.17.1
 vaderSentiment>=3.3.2
 
-# Web scraping
-websocket-client>=1.6.0
-
-# Data processing
-openpyxl>=3.1.0
+# Web scraping and async
+aiohttp>=3.8.0
+websockets>=11.0.0
 
 # FastAPI for server
 fastapi>=0.104.0
 uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# Additional dependencies for enhanced functionality
+soupsieve>=2.0  # CSS selector support for BeautifulSoup
+typing-extensions>=4.0.0  # Type hints support
+idna>=2.0  # Internationalized domain names
+multidict>=4.5  # Dictionary with multiple values per key
+attrs>=17.3.0  # Classes without boilerplate
+frozenlist>=1.1.1  # Immutable list implementation
+aiosignal>=1.4.0  # Async signal handling
+async-timeout>=4.0  # Async timeout support
+yarl>=1.17.0  # URL parsing
+aiohappyeyeballs>=2.5.0  # Happy Eyeballs algorithm
+propcache>=0.2.0  # Property caching
 
 # Optional: News API for financial news
 # newsapi-python>=0.2.6
