@@ -1,32 +1,18 @@
-# Build stage
-FROM golang:1.23-alpine AS builder
-
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
+EXPOSE 8080
 
-# Copy go mod files
-COPY go.mod go.sum ./
-
-# Download dependencies
-RUN go mod download
-
-# Copy source code
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY ["BacktestService.csproj", "./"]
+RUN dotnet restore "BacktestService.csproj"
 COPY . .
+RUN dotnet build "BacktestService.csproj" -c Release -o /app/build
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o backtest-service .
+FROM build AS publish
+RUN dotnet publish "BacktestService.csproj" -c Release -o /app/publish
 
-# Final stage
-FROM alpine:latest
-
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# Copy the binary from builder stage
-COPY --from=builder /app/backtest-service .
-
-# Expose port
-EXPOSE 8082
-
-# Run the binary
-CMD ["./backtest-service"] 
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "BacktestService.dll"] 

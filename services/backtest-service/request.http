@@ -1,0 +1,100 @@
+### Backtest Service API Examples
+
+## 1. Chạy Backtest cho BTCUSDT 1h
+
+```http
+POST http://localhost:8080/api/backtest
+Content-Type: application/json
+
+{
+  "symbol": "BTCUSDT",
+  "interval": "1h",
+  "startDate": "2024-01-01T00:00:00Z",
+  "endDate": "2024-01-31T23:59:59Z",
+  "initialBalance": 10000,
+  "commission": 0.001,
+  "strategy": "AI_PREDICTION"
+}
+```
+
+## 2. Chạy Backtest cho ETHUSDT 15m
+
+```http
+POST http://localhost:8080/api/backtest
+Content-Type: application/json
+
+{
+  "symbol": "ETHUSDT",
+  "interval": "15m",
+  "startDate": "2024-01-15T00:00:00Z",
+  "endDate": "2024-01-22T23:59:59Z",
+  "initialBalance": 5000,
+  "commission": 0.0015,
+  "strategy": "AI_PREDICTION"
+}
+```
+
+## 3. Lấy Kết Quả Backtest
+
+```http
+GET http://localhost:8080/api/backtest/12345678-1234-1234-1234-123456789012
+```
+
+## 4. Lấy Danh Sách Backtest cho BTCUSDT
+
+```http
+GET http://localhost:8080/api/backtest?symbol=BTCUSDT
+```
+
+## 5. Lấy Danh Sách Backtest cho 1h Interval
+
+```http
+GET http://localhost:8080/api/backtest?interval=1h
+```
+
+## 6. Lấy Danh Sách Backtest với Filter Date
+
+```http
+GET http://localhost:8080/api/backtest?startDate=2024-01-01T00:00:00Z&endDate=2024-01-31T23:59:59Z
+```
+
+## 7. Lấy Thống Kê Backtest
+
+```http
+GET http://localhost:8080/api/backtest/stats
+```
+
+## 8. Lấy Thống Kê Backtest cho BTCUSDT
+
+```http
+GET http://localhost:8080/api/backtest/stats?symbol=BTCUSDT
+```
+
+## 9. Xóa Kết Quả Backtest
+
+```http
+DELETE http://localhost:8080/api/backtest/12345678-1234-1234-1234-123456789012
+```
+
+## 10. Chạy Backtest với Parameters Tùy Chỉnh
+
+```http
+POST http://localhost:8080/api/backtest
+Content-Type: application/json
+
+{
+  "symbol": "BNBUSDT",
+  "interval": "4h",
+  "startDate": "2024-01-01T00:00:00Z",
+  "endDate": "2024-01-31T23:59:59Z",
+  "initialBalance": 15000,
+  "commission": 0.001,
+  "strategy": "AI_PREDICTION",
+  "parameters": {
+    "confidenceThreshold": 0.7,
+    "positionSize": 0.9,
+    "stopLoss": 0.05,
+    "takeProfit": 0.15
+  }
+}
+```
