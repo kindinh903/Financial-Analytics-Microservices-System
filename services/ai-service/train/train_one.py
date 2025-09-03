@@ -8,26 +8,10 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import warnings
+from app.config import setting
 
 MODEL_DIR = Path("./models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
-interval_map = {
-    "1m": "1m",
-    "3m": "3m",
-    "5m": "5m",
-    "15m": "15m",
-    "30m": "30m",
-    "1h": "1h",
-    "2h": "2h",
-    "4h": "4h",
-    "6h": "6h",
-    "8h": "8h",
-    "12h": "12h",
-    "1d": "1d",
-    "3d": "3d",
-    "1w": "1w",
-    "1M": "1mon"   # 👈 đổi month thành "1mon"
-}
 
 # Try to import LightGBM, fallback to XGBoost, then RandomForest
 try:
@@ -262,7 +246,7 @@ def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
 
     # Save model + metadata
     # out_dir = MODEL_DIR / f"{symbol}_{interval}"
-    interval_safe = interval_map.get(interval, interval)
+    interval_safe = setting.interval_map.get(interval, interval)
     out_dir = MODEL_DIR / f"{symbol}_{interval_safe}"
 
     out_dir.mkdir(parents=True, exist_ok=True)
