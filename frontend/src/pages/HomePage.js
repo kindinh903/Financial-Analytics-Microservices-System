@@ -1,31 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import TradingViewWidget from 'react-tradingview-widget';
+import MultiChartDashboard from '../components/Charts/MultiChartDashboard';
 
-const TradingInterface = () => {
-  const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+const HomePage = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    console.log('🚀 TradingInterface component loaded!');
-    // Simulate loading time for TradingView Widget
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleSymbolChange = (symbol) => {
-    setSelectedSymbol(symbol);
-    setIsLoading(true);
-    // Simulate loading when changing symbol
-    setTimeout(() => setIsLoading(false), 1000);
-  };
-
-  // Xử lý khi bấm nút 👤
   const handleProfileClick = () => {
     const accessToken = localStorage.getItem('accessToken');
     const user = JSON.parse(localStorage.getItem('user'));
@@ -37,14 +16,6 @@ const TradingInterface = () => {
       navigate('/profile');
     }
   };
-
-  const watchlistData = [
-    { symbol: 'BTCUSDT', price: '43,250.00', change: '+2.45%', changeColor: 'text-green-600' },
-    { symbol: 'ETHUSDT', price: '2,680.50', change: '+1.23%', changeColor: 'text-green-600' },
-    { symbol: 'ADAUSDT', price: '0.485', change: '-0.85%', changeColor: 'text-red-600' },
-    { symbol: 'SOLUSDT', price: '98.45', change: '+3.21%', changeColor: 'text-green-600' },
-    { symbol: 'DOTUSDT', price: '7.25', change: '-1.45%', changeColor: 'text-red-600' },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -73,55 +44,18 @@ const TradingInterface = () => {
         </div>
       </div>
 
-      <div className="flex h-screen">
-        {/* Left Sidebar - Section 2 */}
-        <div className="w-64 bg-white border-r p-4">
-          <div className="mb-6">
-            <h3 className="font-semibold mb-3">Danh sách theo dõi</h3>
-            <div className="space-y-2">
-              {watchlistData.map((item, idx) => (
-                <div 
-                  key={idx}
-                  className={`flex justify-between items-center p-2 rounded cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedSymbol === item.symbol ? 'bg-blue-50 border-l-2 border-blue-500' : ''
-                  }`}
-                  onClick={() => handleSymbolChange(item.symbol)}
-                >
-                  <div>
-                    <div className="font-medium text-sm">{item.symbol}</div>
-                    <div className="text-xs text-gray-500">{item.price}</div>
-                  </div>
-                  <div className={`text-xs ${item.changeColor}`}>
-                    {item.change}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="font-semibold mb-3">Công cụ phân tích</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm transition-colors">📈 Indicators</button>
-              <button className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm transition-colors">📊 Drawing Tools</button>
-              <button className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm transition-colors">⚡ Alerts</button>
-            </div>
-          </div>
-        </div>
-
+      <div className="flex" style={{ height: 'calc(100vh - 60px)' }}>
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Chart Section - Section 3 */}
-          <div className="flex-1 p-4">
-            <div className="bg-white rounded-lg h-full shadow-sm">
-              <div className="p-4 border-b">
+          <div className="flex-1 p-4 overflow-hidden">
+            <div className="bg-white rounded-lg h-full shadow-sm flex flex-col">
+              <div className="p-4 border-b flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-semibold">{selectedSymbol}</h2>
+                    <h2 className="text-lg font-semibold">Multi-Chart Dashboard</h2>
                     <div className="flex gap-2 text-sm">
-                      <span className="text-gray-600">Giá hiện tại:</span>
-                      <span className="font-semibold">43,250.00 USDT</span>
-                      <span className="text-green-600">+2.45%</span>
+                      <span className="text-gray-600">Real-time data from API</span>
                     </div>
                   </div>
                   <div className="text-sm text-gray-500">
@@ -130,40 +64,13 @@ const TradingInterface = () => {
                 </div>
               </div>
               
-              {/* TradingView Widget */}
-              <div className="h-96 relative">
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                      <p className="text-gray-600">Đang tải biểu đồ...</p>
-                    </div>
-                  </div>
-                )}
-                
-                {!isLoading && (
-                  <TradingViewWidget
-                    symbol={`BINANCE:${selectedSymbol}`}
-                    theme="light"
-                    interval="1H"
-                    timezone="Asia/Ho_Chi_Minh"
-                    style="1"
-                    locale="vi"
-                    toolbar_bg="#f1f3f6"
-                    enable_publishing={false}
-                    allow_symbol_change={true}
-                    container_id="tradingview_chart"
-                    autosize={true}
-                    studies={[
-                      "MASimple@tv-basicstudies",
-                      "RSI@tv-basicstudies"
-                    ]}
-                  />
-                )}
+              {/* Multi-Chart Dashboard */}
+              <div className="flex-1 overflow-hidden">
+                <MultiChartDashboard/>
               </div>
 
               {/* Chart notes */}
-              <div className="p-4 bg-gray-50 text-sm">
+              <div className="p-4 bg-gray-50 text-sm flex-shrink-0">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <strong>1. Tại sao cần xem biểu đồ:</strong>
@@ -262,4 +169,4 @@ const TradingInterface = () => {
   );
 };
 
-export default TradingInterface;
+export default HomePage;

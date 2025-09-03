@@ -174,26 +174,26 @@ services:
       timeout: 3s
       retries: 3
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - WATCHPACK_POLLING=true
-    volumes:
-      - ./frontend:/app         # Mount source code
-      # XÓA dòng /app/node_modules để không ghi đè
-    depends_on:
-      - gateway
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile.dev
+  #   container_name: frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - CHOKIDAR_USEPOLLING=true
+  #     - WATCHPACK_POLLING=true
+  #   volumes:
+  #     - ./frontend:/app         # Mount source code
+  #     # XÓA dòng /app/node_modules để không ghi đè
+  #   depends_on:
+  #     - gateway
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
 
   mongodb:
     image: mongo:7.0

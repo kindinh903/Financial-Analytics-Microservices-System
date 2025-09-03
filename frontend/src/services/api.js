@@ -58,6 +58,12 @@ export const priceService = {
       params: { timeframe, limit },
     }),
 
+  // Get candles (new preferred endpoint)
+  getCandles: ({ symbol, interval = '1h', limit = 500, start_time, end_time }) =>
+    api.get('/api/price/candles', {
+      params: { symbol, interval, limit, start_time, end_time },
+    }),
+
   // Get real-time price
   getRealTimePrice: (symbol) =>
     api.get(`/api/price/realtime/${symbol}`),
@@ -68,7 +74,7 @@ export const priceService = {
 
   // Get available symbols
   getAvailableSymbols: () =>
-    api.get('/api/price/symbols'),
+    api.get('/api/price/symbol'),
 
   // Get market overview
   getMarketOverview: () =>

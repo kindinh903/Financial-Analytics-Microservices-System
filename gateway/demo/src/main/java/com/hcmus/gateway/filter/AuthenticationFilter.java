@@ -24,9 +24,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     @Value("${jwt.key:}")
     private String jwtKey;
 
-    @Value("${jwt.enabled:true}")
-    private boolean jwtEnabled;
-
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
 
     public AuthenticationFilter() {
@@ -36,17 +33,18 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
-            if (!jwtEnabled) {
+            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            
+            // Nếu không có JWT thì không xử lý gì, chỉ forward request
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                logger.debug("No JWT token found, forwarding request without user headers");
                 return chain.filter(exchange);
             }
 
-            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return unauthorized(exchange, "Missing or invalid Authorization header");
-            }
-
+            // Nếu có JWT thì xử lý và validate
             String token = authHeader.substring(7);
             logger.info("Gateway received JWT: {}", token);
+            
             try {
                 Key key = Keys.hmacShaKeyFor(jwtKey.getBytes(StandardCharsets.UTF_8));
                 logger.debug("JWT key length: {}", jwtKey.length());
@@ -114,6 +112,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                             userId, email, role, firstName, lastName, permissions, features);
                 }
 
+                // Gắn headers từ JWT vào request
                 var mutated = exchange.getRequest().mutate()
                         .header("X-User-Id", userId == null ? "" : userId)
                         .header("X-User-Email", email == null ? "" : email)
@@ -125,10 +124,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                         .header("X-User-Features", features == null ? "" : features)
                         .build();
 
+                logger.debug("JWT processed successfully, forwarding with user headers");
                 return chain.filter(exchange.mutate().request(mutated).build());
+                
             } catch (Exception ex) {
-                logger.warn("Gateway JWT verify failed: {}", ex.getMessage());
-                return unauthorized(exchange, "Invalid token");
+                logger.warn("Gateway JWT verify failed: {}, forwarding request without user headers", ex.getMessage());
+                // Nếu JWT không hợp lệ, vẫn forward request nhưng không có user headers
+                return chain.filter(exchange);
             }
         };
     }
