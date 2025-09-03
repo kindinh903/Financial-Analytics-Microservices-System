@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import warnings
-from app.config import setting
+from app.config import settings
 
 MODEL_DIR = Path("./models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -246,7 +246,7 @@ def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
 
     # Save model + metadata
     # out_dir = MODEL_DIR / f"{symbol}_{interval}"
-    interval_safe = setting.interval_map.get(interval, interval)
+    interval_safe = settings.interval_map.get(interval, interval)
     out_dir = MODEL_DIR / f"{symbol}_{interval_safe}"
 
     out_dir.mkdir(parents=True, exist_ok=True)

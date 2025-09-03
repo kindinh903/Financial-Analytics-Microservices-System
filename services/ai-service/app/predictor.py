@@ -6,7 +6,7 @@ from pathlib import Path
 from train.train_one import ensure_datetime, compute_technical_indicators, create_lag_features
 from app.sentiment_fng import get_fng, merge_fng_to_ohlcv
 from app.model_utils import load_model
-from app.config import setting
+from app.config import settings
 
 
 def prepare_features_for_predict(df: pd.DataFrame, feature_columns: list, seq_len: int = 20):
@@ -46,7 +46,7 @@ def predict_next_close(df: pd.DataFrame, model_dir: str = "models") -> dict:
 
     fng_df = get_fng(limit=365)
     df = merge_fng_to_ohlcv(df, fng_df)
-    interval_safe = setting.interval_map.get(interval, interval)
+    interval_safe = settings.interval_map.get(interval, interval)
 
 
     model_path =Path(model_dir) / f"{symbol}_{interval_safe}/model.pkl"
