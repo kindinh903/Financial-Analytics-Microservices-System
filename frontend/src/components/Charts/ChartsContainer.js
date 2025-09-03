@@ -11,7 +11,7 @@ const ChartsContainer = ({ charts, onRemoveChart, onUpdateChart }) => {
               chartConfig={chart}
               onRemove={() => onRemoveChart(chart.id)}
               onConfigChange={(config) => onUpdateChart(chart.id, config)}
-              height={400}
+              height={100}
             />
           </div>
         ))}

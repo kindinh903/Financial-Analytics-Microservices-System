@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { priceService } from '../../services/api';
 import ChartHeader from './ChartHeader';
-import IndicatorsPanel from './IndicatorsPanel';
+import IndicatorSelector from './IndicatorSelector';
 
-const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 400 }) => {
+const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
@@ -13,6 +13,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 400 }) =
   const [candles, setCandles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showIndicatorSelector, setShowIndicatorSelector] = useState(false);
 
   // Fetch real data from API
   const fetchCandles = useCallback(async () => {
@@ -129,6 +130,37 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 400 }) =
             title: `EMA(${indicator.period})`
           });
           break;
+        case 'BOLL':
+          const bollData = calculateBollingerBands(data, indicator.period, indicator.stdDev || 2);
+          // Upper band
+          const upperBand = chartRef.current.addLineSeries({
+            color: indicator.color || '#2196F3',
+            lineWidth: 1,
+            title: `BOLL Upper(${indicator.period})`
+          });
+          upperBand.setData(bollData.upper);
+          indicatorSeriesRef.current[`${indicator.type}_upper_${indicator.period}`] = upperBand;
+          
+          // Middle band (SMA)
+          const middleBand = chartRef.current.addLineSeries({
+            color: indicator.color || '#FF9800',
+            lineWidth: 2,
+            title: `BOLL Middle(${indicator.period})`
+          });
+          middleBand.setData(bollData.middle);
+          indicatorSeriesRef.current[`${indicator.type}_middle_${indicator.period}`] = middleBand;
+          
+          // Lower band
+          const lowerBand = chartRef.current.addLineSeries({
+            color: indicator.color || '#2196F3',
+            lineWidth: 1,
+            title: `BOLL Lower(${indicator.period})`
+          });
+          lowerBand.setData(bollData.lower);
+          indicatorSeriesRef.current[`${indicator.type}_lower_${indicator.period}`] = lowerBand;
+          
+          series = null; // Don't set single series for BOLL
+          break;
         case 'RSI':
           indicatorData = calculateRSI(data, indicator.period);
           series = chartRef.current.addLineSeries({
@@ -183,6 +215,27 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 400 }) =
       });
     }
     return ema;
+  };
+
+  const calculateBollingerBands = (data, period = 20, stdDev = 2) => {
+    const upper = [];
+    const middle = [];
+    const lower = [];
+    
+    for (let i = period - 1; i < data.length; i++) {
+      const slice = data.slice(i - period + 1, i + 1);
+      const sma = slice.reduce((acc, candle) => acc + candle.close, 0) / period;
+      
+      const variance = slice.reduce((acc, candle) => acc + Math.pow(candle.close - sma, 2), 0) / period;
+      const standardDeviation = Math.sqrt(variance);
+      
+      const time = data[i].time;
+      middle.push({ time, value: sma });
+      upper.push({ time, value: sma + (standardDeviation * stdDev) });
+      lower.push({ time, value: sma - (standardDeviation * stdDev) });
+    }
+    
+    return { upper, middle, lower };
   };
 
   const calculateRSI = (data, period = 14) => {
@@ -308,6 +361,37 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 400 }) =
     }
   }, [isReady, chartConfig.indicators, updateIndicators]);
 
+  // Handle adding new indicator
+  const handleAddIndicator = (indicatorConfig) => {
+    const newIndicators = [...chartConfig.indicators, {
+      ...indicatorConfig,
+      id: Date.now(), // Simple ID generation
+      color: indicatorConfig.color || getRandomColor()
+    }];
+    
+    onConfigChange({
+      ...chartConfig,
+      indicators: newIndicators
+    });
+    
+    setShowIndicatorSelector(false);
+  };
+
+  // Handle removing indicator
+  const handleRemoveIndicator = (indicatorId) => {
+    const newIndicators = chartConfig.indicators.filter(ind => ind.id !== indicatorId);
+    onConfigChange({
+      ...chartConfig,
+      indicators: newIndicators
+    });
+  };
+
+  // Generate random color for indicators
+  const getRandomColor = () => {
+    const colors = ['#2196F3', '#FF9800', '#4CAF50', '#9C27B0', '#F44336', '#00BCD4'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
   const currentPrice = candles.length > 0 ? candles[candles.length - 1].close : 0;
   const priceChange = candles.length > 1 ? currentPrice - candles[candles.length - 2].close : 0;
   const priceChangePercent = candles.length > 1 ? (priceChange / candles[candles.length - 2].close) * 100 : 0;
@@ -323,16 +407,21 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 400 }) =
         currentPrice={currentPrice}
         priceChange={priceChange}
         priceChangePercent={priceChangePercent}
-      />
-
-      <IndicatorsPanel 
-        indicators={chartConfig.indicators}
-        onConfigChange={onConfigChange}
-        chartConfig={chartConfig}
+        onShowIndicatorSelector={() => setShowIndicatorSelector(true)}
+        onRemoveIndicator={handleRemoveIndicator}
       />
 
       {/* Chart Container */}
       <div ref={containerRef} style={{ height: height, width: '100%' }}></div>
+
+      {/* Indicator Selector Modal */}
+      {showIndicatorSelector && (
+        <IndicatorSelector
+          onAddIndicator={handleAddIndicator}
+          onClose={() => setShowIndicatorSelector(false)}
+          existingIndicators={chartConfig.indicators}
+        />
+      )}
     </div>
   );
 };
