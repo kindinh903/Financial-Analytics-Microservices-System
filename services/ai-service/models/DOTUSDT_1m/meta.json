@@ -1,6 +1,6 @@
 {
   "symbol": "DOTUSDT",
-  "interval": "1M",
+  "interval": "1m",
   "feature_columns": [
     "sentiment",
     "sentiment_diff",
@@ -62,5 +62,5 @@
   ],
   "seq_len": 20,
   "target_mode": "log_return",
-  "backend": "lightgbm"
+  "backend": "sklearn_rf"
 }

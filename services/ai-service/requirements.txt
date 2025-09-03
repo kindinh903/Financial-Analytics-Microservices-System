@@ -9,5 +9,4 @@ python-dotenv
 numpy
 lightgbm
 xgboost
-
-
+pandas

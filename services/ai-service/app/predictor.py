@@ -22,6 +22,14 @@ def prepare_features_for_predict(df: pd.DataFrame, feature_columns: list, seq_le
 
     df = compute_technical_indicators(df)
     df = create_lag_features(df, seq_len=seq_len, use_close_lags=True)
+     # Clean extreme values
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df.fillna(0)   # hoặc df.dropna() nếu muốn bỏ hàng lỗi
+
+    # Optionally, clip toàn bộ feature về [-1e6, 1e6] để tránh float32 overflow
+    for col in df.columns:
+        if df[col].dtype.kind in "fc":  # float or complex
+            df[col] = df[col].clip(-1e6, 1e6)
 
     # lấy hàng cuối cùng không NaN
     candidate = df[feature_columns].dropna().tail(1)
