@@ -8,6 +8,7 @@ from app.storage.redis_client import redis_client
 from app.storage.influx_client import influx_writer
 from app.utils.binance_api import fetch_klines, fetch_market_snapshot, fetch_top_movers
 from app.config import settings, SYMBOL_WHITELIST, INTERVALS
+from app.services.candle_providers import CandleProvider, RedisProvider, InfluxProvider, BinanceProvider
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,29 +19,16 @@ class PriceService:
         self.redis = redis_client
         self.influx = influx_writer
 
-    async def get_candles(
-            self, symbol: str, interval: str, limit: int = 20,
-            start_time: int | None = None, end_time: int | None = None
-        ) -> List[dict]:
-            print(f"[get_candles] symbol={symbol}, interval={interval}, limit={limit}, "
-                f"start_time={start_time}, end_time={end_time}")
-
-            # Step 1: Redis
-            cached = await self._get_from_redis(symbol, interval, start_time, end_time)
-            if len(cached) >= limit:
-                return cached[:limit]
-
-            # Step 2: Influx
-            influx_data = await self._get_from_influx(symbol, interval, limit, start_time, end_time)
-            merged = self._merge_candles(cached, influx_data)
-            if len(merged) >= limit:
-                return merged[:limit]
-
-            # Step 3: Binance
-            final_list = await self._fetch_from_binance(
-                symbol, interval, merged, limit, start_time, end_time
+        # chain
+        self.provider_chain = RedisProvider(
+            InfluxProvider(
+                BinanceProvider(self._fetch_from_binance)
             )
-            return final_list[:limit]
+        )
+
+
+    async def get_candles(self, symbol, interval, limit=20, start_time=None, end_time=None):
+        return await self.provider_chain.get(symbol, interval, limit, start_time, end_time, [])
 
     async def get_market_snapshot(self, symbol_list: list[str]):
         """
