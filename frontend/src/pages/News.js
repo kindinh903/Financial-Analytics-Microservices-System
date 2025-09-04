@@ -7,8 +7,15 @@ const News = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [trendingHeadlines, setTrendingHeadlines] = useState({});
   const [warehouseStats, setWarehouseStats] = useState(null);
+
+  const retryFetch = () => {
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    setLoading(true);
+  };
 
   useEffect(() => {
     const fetchEnhancedNews = async () => {
@@ -28,20 +35,30 @@ const News = () => {
         try {
           const newsData = await crawlerService.getEnhancedNews('BTCUSDT', 20);
           console.log('Raw news data:', newsData); // Debug log
+          console.log('News data structure:', {
+            hasData: !!newsData.data,
+            hasNewsData: !!newsData.data?.news_data,
+            hasArticles: !!newsData.data?.news_data?.articles,
+            articlesLength: newsData.data?.news_data?.articles?.length || 0
+          });
           
           // Handle different possible data structures
           let newsArray = [];
           if (newsData.data.news_data && Array.isArray(newsData.data.news_data.articles)) {
             // Handle the actual API response structure
             newsArray = newsData.data.news_data.articles;
+            console.log('✅ Using news_data.articles structure, found', newsArray.length, 'articles');
           } else if (Array.isArray(newsData.data.news_data)) {
             newsArray = newsData.data.news_data;
+            console.log('✅ Using news_data array structure, found', newsArray.length, 'articles');
           } else if (Array.isArray(newsData.data.data)) {
             newsArray = newsData.data.data;
+            console.log('✅ Using data array structure, found', newsArray.length, 'articles');
           } else if (Array.isArray(newsData.data)) {
             newsArray = newsData.data;
+            console.log('✅ Using root data array structure, found', newsArray.length, 'articles');
           } else {
-            console.warn('Unexpected news data structure:', newsData);
+            console.warn('❌ Unexpected news data structure:', newsData);
             newsArray = [];
           }
           
@@ -72,7 +89,15 @@ const News = () => {
           }
         } catch (newsError) {
           console.warn('Failed to fetch enhanced news:', newsError);
-          setError('Failed to load enhanced news. Please try again later.');
+          
+          // Handle different types of errors
+          if (newsError.code === 'ECONNABORTED') {
+            setError('Request timed out. The crawler is processing data, please wait and try again.');
+          } else if (newsError.response?.status === 404) {
+            setError('Crawler service not available. Please check if the service is running.');
+          } else {
+            setError('Failed to load enhanced news. Please try again later.');
+          }
           setNews([]);
         }
       } catch (err) {
@@ -87,9 +112,22 @@ const News = () => {
     const fetchCategories = async () => {
       try {
         const response = await newsService.getNewsCategories();
-        setCategories(response.data || []);
+        console.log('Categories response:', response.data);
+        
+        // Handle different response structures
+        let categoriesArray = [];
+        if (Array.isArray(response.data)) {
+          categoriesArray = response.data;
+        } else if (response.data && Array.isArray(response.data.categories)) {
+          categoriesArray = response.data.categories;
+        } else {
+          console.warn('Unexpected categories structure:', response.data);
+          categoriesArray = ['all', 'crypto', 'stocks', 'forex', 'commodities', 'economy', 'sentiment'];
+        }
+        
+        setCategories(categoriesArray);
       } catch (err) {
-        console.warn('Using enhanced categories:', err);
+        console.warn('Using fallback categories:', err);
         setCategories(['all', 'crypto', 'stocks', 'forex', 'commodities', 'economy', 'sentiment']);
       }
     };
@@ -106,7 +144,7 @@ const News = () => {
     fetchEnhancedNews();
     fetchCategories();
     fetchWarehouseStats();
-  }, []);
+  }, [retryCount]);
 
 
   const filteredNews = selectedCategory === 'all' 
@@ -322,9 +360,15 @@ const News = () => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex">
             <div className="text-yellow-400">⚠️</div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-yellow-800">Warning</p>
               <div className="mt-2 text-sm text-yellow-700">{error}</div>
+              <button
+                onClick={retryFetch}
+                className="mt-3 px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+              >
+                Retry ({retryCount > 0 ? `Attempt ${retryCount + 1}` : 'Try Again'})
+              </button>
             </div>
           </div>
         </div>

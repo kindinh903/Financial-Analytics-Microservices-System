@@ -82,6 +82,18 @@ spring:
                 redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: '#{@ipKeyResolver}'
+        - id: crawler-health
+          uri: http://crawler:8000
+          predicates:
+            - Path=/health/crawler
+          filters:
+            - RewritePath=/health/crawler, /health
+        - id: crawler-service
+          uri: http://crawler:8000
+          predicates:
+            - Path=/api/crawler/**
+          filters:
+            - RewritePath=/api/crawler/(?<segment>.*), /${segment}
 management:
   endpoints:
     web:

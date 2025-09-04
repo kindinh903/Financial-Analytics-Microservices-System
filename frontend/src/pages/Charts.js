@@ -3,7 +3,7 @@ import { priceService } from '../services/api';
 import TradingViewChart from '../components/Charts/TradingViewChart';
 
 const Charts = () => {
-  const [selectedSymbol, setSelectedSymbol] = useState('BTC/USD');
+  const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const [selectedTimeframe, setSelectedTimeframe] = useState('1D');
   const [availableSymbols, setAvailableSymbols] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -18,11 +18,27 @@ const Charts = () => {
     { value: '1M', label: '1 Month' },
   ];
 
-  // Popular symbols for quick selection
+  // Popular symbols for quick selection (using correct format for price service)
   const popularSymbols = [
-    'BTC/USD', 'ETH/USD', 'AAPL', 'GOOGL', 'MSFT', 'TSLA',
-    'AMZN', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'
+    'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 'XRPUSDT',
+    'DOGEUSDT', 'DOTUSDT', 'LTCUSDT'
   ];
+
+  // Symbol display mapping
+  const getSymbolDisplayName = (symbol) => {
+    const displayMap = {
+      'BTCUSDT': 'BTC/USDT',
+      'ETHUSDT': 'ETH/USDT',
+      'BNBUSDT': 'BNB/USDT',
+      'SOLUSDT': 'SOL/USDT',
+      'ADAUSDT': 'ADA/USDT',
+      'XRPUSDT': 'XRP/USDT',
+      'DOGEUSDT': 'DOGE/USDT',
+      'DOTUSDT': 'DOT/USDT',
+      'LTCUSDT': 'LTC/USDT'
+    };
+    return displayMap[symbol] || symbol;
+  };
 
   useEffect(() => {
     const fetchSymbols = async () => {
@@ -45,15 +61,31 @@ const Charts = () => {
         setLoading(true);
         setError(null);
         
+        console.log('Fetching chart data for:', { selectedSymbol, selectedTimeframe });
+        
         const response = await priceService.getHistoricalData(
           selectedSymbol,
           selectedTimeframe,
           100
         );
         
-        setChartData(response.data || []);
+        console.log('Chart data response:', response);
+        console.log('Chart data array:', response.data);
+        
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          setChartData(response.data);
+          console.log('✅ Chart data loaded successfully:', response.data.length, 'candles');
+        } else {
+          console.warn('⚠️ No chart data received, using mock data');
+          setChartData(generateMockData());
+        }
       } catch (err) {
-        console.error('Error fetching chart data:', err);
+        console.error('❌ Error fetching chart data:', err);
+        console.error('Error details:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data
+        });
         setError('Failed to load chart data. Using sample data.');
         // Fallback to mock data
         setChartData(generateMockData());
@@ -146,22 +178,22 @@ const Charts = () => {
             </label>
             <div className="flex space-x-2">
               <button
-                onClick={() => setSelectedSymbol('BTC/USD')}
+                onClick={() => setSelectedSymbol('BTCUSDT')}
                 className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 BTC
               </button>
               <button
-                onClick={() => setSelectedSymbol('ETH/USD')}
+                onClick={() => setSelectedSymbol('ETHUSDT')}
                 className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 ETH
               </button>
               <button
-                onClick={() => setSelectedSymbol('SPY')}
+                onClick={() => setSelectedSymbol('SOLUSDT')}
                 className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
-                SPY
+                SOL
               </button>
             </div>
           </div>
@@ -173,8 +205,28 @@ const Charts = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{selectedSymbol}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{getSymbolDisplayName(selectedSymbol)}</h2>
               <p className="text-sm text-gray-500">{selectedTimeframe} Chart</p>
+              
+              {/* Timeframe Buttons */}
+              <div className="flex space-x-2 mt-2">
+                {timeframes.map((tf) => (
+                  <button
+                    key={tf.value}
+                    onClick={() => {
+                      console.log('🔄 Timeframe button clicked:', tf.value);
+                      setSelectedTimeframe(tf.value);
+                    }}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      selectedTimeframe === tf.value
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tf.value}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
