@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { newsService } from '../services/api';
+import { newsService, crawlerService } from '../services/api';
 
 const News = () => {
   const [news, setNews] = useState([]);
@@ -10,42 +10,36 @@ const News = () => {
   const [trendingHeadlines, setTrendingHeadlines] = useState({});
   const [warehouseStats, setWarehouseStats] = useState(null);
 
-  // Enhanced crawler API base URL
-  // Use host.docker.internal for Docker containers, localhost for direct access
-  const ENHANCED_API_BASE = process.env.NODE_ENV === 'production' 
-    ? 'http://host.docker.internal:8001' 
-    : 'http://localhost:8001';
-
   useEffect(() => {
     const fetchEnhancedNews = async () => {
       try {
         setLoading(true);
-        console.log(`🔗 Using API base URL: ${ENHANCED_API_BASE}`);
+        console.log('🔗 Using gateway-based crawler service');
         
         // Fetch trending headlines first
-        const trendingResponse = await fetch(`${ENHANCED_API_BASE}/trending`);
-        if (trendingResponse.ok) {
-          const trendingData = await trendingResponse.json();
-          setTrendingHeadlines(trendingData.trending_headlines || {});
+        try {
+          const trendingData = await crawlerService.getTrending();
+          setTrendingHeadlines(trendingData.data.trending_headlines || {});
+        } catch (error) {
+          console.warn('Could not fetch trending headlines:', error);
         }
 
         // Fetch latest news from enhanced crawler
-        const newsResponse = await fetch(`${ENHANCED_API_BASE}/news/enhanced?symbol=BTCUSDT&limit=20`);
-        if (newsResponse.ok) {
-          const newsData = await newsResponse.json();
+        try {
+          const newsData = await crawlerService.getEnhancedNews('BTCUSDT', 20);
           console.log('Raw news data:', newsData); // Debug log
           
           // Handle different possible data structures
           let newsArray = [];
-          if (Array.isArray(newsData.news_data)) {
-            newsArray = newsData.news_data;
+          if (newsData.data.news_data && Array.isArray(newsData.data.news_data.articles)) {
+            // Handle the actual API response structure
+            newsArray = newsData.data.news_data.articles;
+          } else if (Array.isArray(newsData.data.news_data)) {
+            newsArray = newsData.data.news_data;
+          } else if (Array.isArray(newsData.data.data)) {
+            newsArray = newsData.data.data;
           } else if (Array.isArray(newsData.data)) {
             newsArray = newsData.data;
-          } else if (Array.isArray(newsData)) {
-            newsArray = newsData;
-          } else if (newsData.news_data && Array.isArray(newsData.news_data.articles)) {
-            // Handle the actual API response structure
-            newsArray = newsData.news_data.articles;
           } else {
             console.warn('Unexpected news data structure:', newsData);
             newsArray = [];
@@ -57,9 +51,9 @@ const News = () => {
             return {
               id: index + 1,
               title: item.title || item.headline || item.name || 'Financial News Update',
-              summary: item.summary || item.content || item.description || 'Market analysis and financial insights',
+              summary: item.description || item.summary || item.content || 'Market analysis and financial insights',
               category: item.category || item.type || 'crypto',
-              source: item.source || item.domain || item.url || 'Financial Source',
+              source: item.source || item.domain || 'Financial Source',
               publishedAt: item.published_at || item.timestamp || item.date || new Date().toISOString(),
               image: item.image || `https://picsum.photos/300/200?random=${index}`,
               url: item.url || item.link || item.source_url || '#',
@@ -73,17 +67,18 @@ const News = () => {
           setError(null);
           
           // Show storage confirmation if available
-          if (newsData.stored_count !== undefined) {
-            console.log(`✅ Stored ${newsData.stored_count} articles in data warehouse`);
+          if (newsData.data.stored_count !== undefined) {
+            console.log(`✅ Stored ${newsData.data.stored_count} articles in data warehouse`);
           }
-        } else {
-          throw new Error(`Failed to fetch enhanced news: ${newsResponse.status}`);
+        } catch (newsError) {
+          console.warn('Failed to fetch enhanced news:', newsError);
+          setError('Failed to load enhanced news. Please try again later.');
+          setNews([]);
         }
       } catch (err) {
         console.error('Error fetching enhanced news:', err);
-        setError('Failed to load enhanced news. Using fallback data.');
-        // Fallback to enhanced mock data with better structure
-        setNews(generateEnhancedMockNews());
+        setError('Failed to load enhanced news. Please try again later.');
+        setNews([]);
       } finally {
         setLoading(false);
       }
@@ -101,11 +96,8 @@ const News = () => {
 
     const fetchWarehouseStats = async () => {
       try {
-        const response = await fetch(`${ENHANCED_API_BASE}/data/warehouse/stats`);
-        if (response.ok) {
-          const stats = await response.json();
-          setWarehouseStats(stats.data);
-        }
+        const stats = await crawlerService.getWarehouseStats();
+        setWarehouseStats(stats.data.data);
       } catch (err) {
         console.warn('Could not fetch warehouse stats:', err);
       }
@@ -116,47 +108,6 @@ const News = () => {
     fetchWarehouseStats();
   }, []);
 
-  const generateEnhancedMockNews = () => [
-    {
-      id: 1,
-      title: 'Bitcoin Surges Past $50,000 as Institutional Adoption Grows',
-      summary: 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021, driven by increased institutional adoption and positive market sentiment.',
-      category: 'crypto',
-      source: 'Reddit r/CryptoCurrency',
-      publishedAt: new Date().toISOString(),
-      image: 'https://picsum.photos/300/200?random=1',
-      url: 'https://reddit.com/r/CryptoCurrency',
-      sentiment: 'positive',
-      confidence: 0.85,
-      keywords: ['bitcoin', 'institutional', 'adoption']
-    },
-    {
-      id: 2,
-      title: 'Federal Reserve Signals Potential Rate Cuts in 2024',
-      summary: 'The Federal Reserve has indicated a more dovish stance, suggesting potential interest rate cuts in 2024 as inflation continues to moderate.',
-      category: 'economy',
-      source: 'Financial Times Forum',
-      publishedAt: new Date(Date.now() - 3600000).toISOString(),
-      image: 'https://picsum.photos/300/200?random=2',
-      url: 'https://ft.com/forums',
-      sentiment: 'neutral',
-      confidence: 0.72,
-      keywords: ['federal reserve', 'interest rates', 'inflation']
-    },
-    {
-      id: 3,
-      title: 'Tech Stocks Rally on Strong Earnings Reports',
-      summary: 'Major technology companies have reported strong quarterly earnings, leading to a broad rally in tech stocks and pushing major indices to new highs.',
-      category: 'stocks',
-      source: 'MarketWatch Community',
-      publishedAt: new Date(Date.now() - 7200000).toISOString(),
-      image: 'https://picsum.photos/300/200?random=3',
-      url: 'https://marketwatch.com/community',
-      sentiment: 'positive',
-      confidence: 0.91,
-      keywords: ['tech stocks', 'earnings', 'rally']
-    }
-  ];
 
   const filteredNews = selectedCategory === 'all' 
     ? news 
@@ -340,14 +291,11 @@ const News = () => {
             onClick={async () => {
               setLoading(true);
               try {
-                const response = await fetch(`${ENHANCED_API_BASE}/news/enhanced?symbol=BTCUSDT&limit=20&force_refresh=true`);
-                if (response.ok) {
-                  const data = await response.json();
-                  if (data.stored_count !== undefined) {
-                    alert(`✅ Refreshed and stored ${data.stored_count} new articles in data warehouse!`);
-                  }
-                  fetchEnhancedNews(); // Refresh the display
+                const data = await crawlerService.getEnhancedNews('BTCUSDT', 20);
+                if (data.data.stored_count !== undefined) {
+                  alert(`✅ Refreshed and stored ${data.data.stored_count} new articles in data warehouse!`);
                 }
+                fetchEnhancedNews(); // Refresh the display
               } catch (error) {
                 console.error('Error refreshing news:', error);
               } finally {

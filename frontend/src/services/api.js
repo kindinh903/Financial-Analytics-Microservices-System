@@ -46,6 +46,7 @@ export const healthCheck = {
   price: () => api.get('/api/price/health'),
   news: () => api.get('/api/news/health'),
   user: () => api.get('/api/user/health'),
+  crawler: () => api.get('/health/crawler'),
 };
 
 // Price service endpoints
@@ -113,6 +114,45 @@ export const newsService = {
 
   getNewsCategories: () =>
     api.get('/api/news/categories'),
+};
+
+// Crawler service endpoints
+export const crawlerService = {
+  // Enhanced crawl
+  enhancedCrawl: (data) =>
+    api.post('/api/crawler/crawl/enhanced', data),
+
+  // Get trending headlines
+  getTrending: (forceRefresh = false) =>
+    api.get('/api/crawler/trending', { params: { force_refresh: forceRefresh } }),
+
+  // Get latest news
+  getLatestNews: (symbol = 'BTCUSDT', limit = 20) =>
+    api.get('/api/crawler/news/latest', { params: { symbol, limit } }),
+
+  // Get enhanced news
+  getEnhancedNews: (symbol = 'BTCUSDT', limit = 20) =>
+    api.get('/api/crawler/news/enhanced', { params: { symbol, limit } }),
+
+  // Analyze sentiment
+  analyzeSentiment: (text) =>
+    api.get('/api/crawler/sentiment/analyze', { params: { text } }),
+
+  // Get news sources
+  getNewsSources: () =>
+    api.get('/api/crawler/news/sources'),
+
+  // Get sentiment summary
+  getSentimentSummary: (symbol, days = 7) =>
+    api.get(`/api/crawler/data/sentiment/summary/${symbol}`, { params: { days } }),
+
+  // Export CSV
+  exportSentimentCSV: (symbol, days = 30) =>
+    api.get(`/api/crawler/data/export/csv/${symbol}`, { params: { days } }),
+
+  // Get warehouse stats
+  getWarehouseStats: () =>
+    api.get('/api/crawler/data/warehouse/stats'),
 };
 
 export default api; 
