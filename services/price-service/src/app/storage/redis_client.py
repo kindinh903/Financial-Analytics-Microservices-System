@@ -4,8 +4,17 @@ import json
 from typing import Optional, List
 
 class RedisClient:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:   # nếu chưa có instance thì tạo
+            cls._instance = super(RedisClient, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self._client: Optional[aioredis.Redis] = None
+        if not hasattr(self, "_initialized"):   # tránh init nhiều lần
+            self._client: Optional[aioredis.Redis] = None
+            self._initialized = True
 
     async def init(self, url: str):
         self._client = aioredis.from_url(url, decode_responses=True)

@@ -7,13 +7,23 @@ from influxdb_client import InfluxDBClient, Point, WriteOptions
 from typing import List
 from datetime import datetime
 
+
 class InfluxWriter:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(InfluxWriter, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.client: InfluxDBClient | None = None
-        self.write_api = None
-        self.query_api = None
-        self.org = None
-        self.bucket = None
+        if not hasattr(self, "_initialized"):
+            self.client = None
+            self.write_api = None
+            self.query_api = None
+            self.org = None
+            self.bucket = None
+            self._initialized = True
 
     async def init(self, url: str, token: str, org: str, bucket: str):
         self.client = InfluxDBClient(url=url, token=token, org=org)
