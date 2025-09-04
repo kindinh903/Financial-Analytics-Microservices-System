@@ -318,6 +318,12 @@ class EnhancedFinancialCrawler:
     def store_article_with_sentiment(self, article_data):
         """Store article and its sentiment analysis in the data warehouse"""
         try:
+            # Check for duplicates first
+            article_url = article_data.get('url', '')
+            if article_url and self.data_warehouse.article_exists_by_url(article_url):
+                logger.info(f"Article already exists, skipping: {article_url}")
+                return None
+            
             # Analyze sentiment
             text_for_analysis = article_data.get('content', '') or article_data.get('summary', '') or article_data.get('title', '')
             sentiment_result = self.analyze_sentiment_enhanced(text_for_analysis)
@@ -669,36 +675,8 @@ class EnhancedFinancialCrawler:
                 (current_time - self.trending_cache_time) < self.cache_duration):
                 return self.trending_topics
             
-            # Generate trending topics based on current market data
-            trending_topics = {
-                'bitcoin': {
-                    'sentiment': 'positive',
-                    'confidence': 0.75,
-                    'headlines': [
-                        'Bitcoin Institutional Adoption Accelerates',
-                        'BTC Price Shows Strong Support Levels',
-                        'Crypto Market Sentiment Turns Bullish'
-                    ]
-                },
-                'ethereum': {
-                    'sentiment': 'positive',
-                    'confidence': 0.68,
-                    'headlines': [
-                        'Ethereum 2.0 Progress Continues',
-                        'DeFi Growth Drives ETH Demand',
-                        'Smart Contract Innovation Accelerates'
-                    ]
-                },
-                'market_overview': {
-                    'sentiment': 'neutral',
-                    'confidence': 0.45,
-                    'headlines': [
-                        'Global Markets Show Mixed Signals',
-                        'Trading Volume Increases Across Exchanges',
-                        'Regulatory Developments Shape Industry'
-                    ]
-                }
-            }
+            # Get real trending data from news articles
+            trending_topics = self._analyze_trending_from_news()
             
             # Update cache
             self.trending_topics = trending_topics
@@ -709,6 +687,155 @@ class EnhancedFinancialCrawler:
         except Exception as e:
             logger.error(f"Error getting trending headlines: {str(e)}")
             return {}
+    
+    def _analyze_trending_from_news(self):
+        """Analyze news articles to extract real trending topics"""
+        try:
+            # Get recent news articles from SQLite database
+            recent_articles = self.data_warehouse.get_recent_articles(limit=50)
+            logger.info(f"Found {len(recent_articles)} recent articles for trending analysis")
+            
+            # Initialize trending topics
+            trending_topics = {
+                'bitcoin': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': [],
+                    'mentions': 0
+                },
+                'ethereum': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': [],
+                    'mentions': 0
+                },
+                'market_overview': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': [],
+                    'mentions': 0
+                }
+            }
+            
+            # Analyze articles for trending topics
+            bitcoin_mentions = 0
+            ethereum_mentions = 0
+            market_mentions = 0
+            
+            for article in recent_articles:
+                title = article.get('title', '').lower()
+                content = article.get('content', '').lower()
+                sentiment = article.get('sentiment', 'neutral')
+                confidence = article.get('confidence', 0.5)
+                
+                # Check for Bitcoin mentions
+                if any(keyword in title or keyword in content for keyword in ['bitcoin', 'btc', 'btcusdt']):
+                    bitcoin_mentions += 1
+                    trending_topics['bitcoin']['mentions'] += 1
+                    if len(trending_topics['bitcoin']['headlines']) < 3:
+                        trending_topics['bitcoin']['headlines'].append(article.get('title', 'Bitcoin News Update'))
+                    # Update sentiment based on recent articles
+                    if sentiment == 'positive':
+                        trending_topics['bitcoin']['sentiment'] = 'positive'
+                        trending_topics['bitcoin']['confidence'] = max(trending_topics['bitcoin']['confidence'], confidence)
+                    elif sentiment == 'negative':
+                        trending_topics['bitcoin']['sentiment'] = 'negative'
+                        trending_topics['bitcoin']['confidence'] = max(trending_topics['bitcoin']['confidence'], confidence)
+                
+                # Check for Ethereum mentions
+                if any(keyword in title or keyword in content for keyword in ['ethereum', 'eth', 'ethusdt']):
+                    trending_topics['ethereum']['mentions'] += 1
+                    if len(trending_topics['ethereum']['headlines']) < 3:
+                        trending_topics['ethereum']['headlines'].append(article.get('title', 'Ethereum News Update'))
+                    # Update sentiment based on recent articles
+                    if sentiment == 'positive':
+                        trending_topics['ethereum']['sentiment'] = 'positive'
+                        trending_topics['ethereum']['confidence'] = max(trending_topics['ethereum']['confidence'], confidence)
+                    elif sentiment == 'negative':
+                        trending_topics['ethereum']['sentiment'] = 'negative'
+                        trending_topics['ethereum']['confidence'] = max(trending_topics['ethereum']['confidence'], confidence)
+                
+                # Check for general market mentions
+                if any(keyword in title or keyword in content for keyword in ['market', 'crypto', 'trading', 'exchange']):
+                    trending_topics['market_overview']['mentions'] += 1
+                    if len(trending_topics['market_overview']['headlines']) < 3:
+                        trending_topics['market_overview']['headlines'].append(article.get('title', 'Market News Update'))
+                    # Update sentiment based on recent articles
+                    if sentiment == 'positive':
+                        trending_topics['market_overview']['sentiment'] = 'positive'
+                        trending_topics['market_overview']['confidence'] = max(trending_topics['market_overview']['confidence'], confidence)
+                    elif sentiment == 'negative':
+                        trending_topics['market_overview']['sentiment'] = 'negative'
+                        trending_topics['market_overview']['confidence'] = max(trending_topics['market_overview']['confidence'], confidence)
+            
+            # Fill in default headlines if no real data
+            for topic in trending_topics:
+                if not trending_topics[topic]['headlines']:
+                    if topic == 'bitcoin':
+                        trending_topics[topic]['headlines'] = ['Bitcoin Market Analysis', 'BTC Price Movement', 'Crypto Market Update']
+                    elif topic == 'ethereum':
+                        trending_topics[topic]['headlines'] = ['Ethereum Development', 'ETH Trading Activity', 'DeFi Market Trends']
+                    else:
+                        trending_topics[topic]['headlines'] = ['Market Overview', 'Trading Activity', 'Financial News']
+            
+            logger.info(f"Trending analysis results: Bitcoin={bitcoin_mentions}, Ethereum={ethereum_mentions}, Market={market_mentions}")
+            logger.info(f"Final trending topics: {trending_topics}")
+            
+            return trending_topics
+            
+        except Exception as e:
+            logger.error(f"Error analyzing trending from news: {str(e)}")
+            # Return default trending topics
+            return {
+                'bitcoin': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': ['Bitcoin Market Analysis', 'BTC Price Movement', 'Crypto Market Update'],
+                    'mentions': 0
+                },
+                'ethereum': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': ['Ethereum Development', 'ETH Trading Activity', 'DeFi Market Trends'],
+                    'mentions': 0
+                },
+                'market_overview': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': ['Market Overview', 'Trading Activity', 'Financial News'],
+                    'mentions': 0
+                }
+            }
+    
+    def _get_recent_news_articles(self, limit=50):
+        """Get recent news articles from database (not CSV)"""
+        try:
+            # Use the database instead of CSV files
+            logger.info("Getting recent articles from database")
+            articles = self.data_warehouse.get_recent_articles(limit)
+            
+            # Convert database format to expected format
+            formatted_articles = []
+            for article in articles:
+                formatted_article = {
+                    'title': article.get('title', ''),
+                    'content': article.get('title', ''),  # Use title as content for now
+                    'sentiment': article.get('sentiment', 'neutral'),
+                    'confidence': article.get('confidence', 0.5),
+                    'source': article.get('source', ''),
+                    'url': article.get('url', ''),
+                    'published_at': article.get('published_at', ''),
+                    'keywords': article.get('keywords', ''),
+                    'score': article.get('score', 0.0)
+                }
+                formatted_articles.append(formatted_article)
+            
+            logger.info(f"Retrieved {len(formatted_articles)} articles from database")
+            return formatted_articles
+            
+        except Exception as e:
+            logger.error(f"Error getting recent news articles from database: {str(e)}")
+            return []
     
     def export_to_excel_enhanced(self, data, filename=None):
         """Enhanced Excel export with better formatting (simplified without pandas)"""

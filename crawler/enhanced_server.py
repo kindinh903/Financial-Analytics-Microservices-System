@@ -39,7 +39,7 @@ scheduler = BackgroundScheduler()
 # Track auto-crawling status
 auto_crawling_active = False
 auto_crawling_symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT', 'DOTUSDT']  # Default symbols to track
-auto_crawling_interval = 300  # 5 minutes default interval
+auto_crawling_interval = 120  # 2 minutes default interval for better user experience
 
 class EnhancedCrawlRequest(BaseModel):
     symbol: str
@@ -304,6 +304,48 @@ async def get_enhanced_news(symbol: str = "BTCUSDT", limit: int = 20):
     except Exception as e:
         logger.error(f"Enhanced news error: {str(e)}")
         return {"status": "error", "error": str(e)}
+
+@app.get("/news/stored")
+async def get_stored_news(symbol: str = "BTCUSDT", limit: int = 50):
+    """Get stored news from SQLite database without triggering new crawl"""
+    try:
+        # Get stored articles from SQLite database
+        stored_articles = enhanced_crawler.data_warehouse.get_recent_articles(limit=limit)
+        
+        if not stored_articles:
+            return {
+                "status": "success",
+                "news_data": {"articles": []},
+                "message": "No stored articles found",
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # Format the stored articles
+        formatted_articles = []
+        for article in stored_articles:
+            formatted_article = {
+                "title": article.get('title', ''),
+                "description": article.get('title', ''),  # Use title as description for now
+                "url": article.get('url', ''),
+                "source": article.get('source', ''),
+                "published_at": article.get('published_at', ''),
+                "sentiment": article.get('sentiment', 'neutral'),
+                "confidence": article.get('confidence', 0.5),
+                "keywords": article.get('keywords', ''),
+                "score": article.get('score', 0.0)
+            }
+            formatted_articles.append(formatted_article)
+        
+        return {
+            "status": "success",
+            "news_data": {"articles": formatted_articles},
+            "count": len(formatted_articles),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Stored news error: {str(e)}")
+        return {"error": str(e), "news_data": {"articles": []}}
 
 @app.get("/news/sources")
 async def get_news_sources():

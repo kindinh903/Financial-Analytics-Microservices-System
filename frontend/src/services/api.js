@@ -158,6 +158,10 @@ export const crawlerService = {
   getEnhancedNews: (symbol = 'BTCUSDT', limit = 20) =>
     api.get('/api/crawler/news/enhanced', { params: { symbol, limit } }),
 
+  // Get stored news (no crawling)
+  getStoredNews: (symbol = 'BTCUSDT', limit = 50) =>
+    api.get('/api/crawler/news/stored', { params: { symbol, limit } }),
+
   // Analyze sentiment
   analyzeSentiment: (text) =>
     api.get('/api/crawler/sentiment/analyze', { params: { text } }),

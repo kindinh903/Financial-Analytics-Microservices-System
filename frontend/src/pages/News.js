@@ -17,8 +17,7 @@ const News = () => {
     setLoading(true);
   };
 
-  useEffect(() => {
-    const fetchEnhancedNews = async () => {
+  const fetchEnhancedNews = async () => {
       try {
         setLoading(true);
         console.log('🔗 Using gateway-based crawler service');
@@ -26,14 +25,16 @@ const News = () => {
         // Fetch trending headlines first
         try {
           const trendingData = await crawlerService.getTrending();
+          console.log('Raw trending data:', trendingData); // Debug log
+          console.log('Trending headlines:', trendingData.data.trending_headlines); // Debug log
           setTrendingHeadlines(trendingData.data.trending_headlines || {});
         } catch (error) {
           console.warn('Could not fetch trending headlines:', error);
         }
 
-        // Fetch latest news from enhanced crawler
+        // Fetch stored news from data warehouse (no crawling)
         try {
-          const newsData = await crawlerService.getEnhancedNews('BTCUSDT', 20);
+          const newsData = await crawlerService.getStoredNews('BTCUSDT', 50);
           console.log('Raw news data:', newsData); // Debug log
           console.log('News data structure:', {
             hasData: !!newsData.data,
@@ -64,24 +65,124 @@ const News = () => {
           
           // Transform enhanced news data to match existing UI structure
           const transformedNews = newsArray.map((item, index) => {
-            console.log(`Article ${index + 1} sentiment:`, item.sentiment, typeof item.sentiment);
+            console.log(`Article ${index + 1} raw data:`, {
+              title: item.title,
+              sentiment: item.sentiment,
+              sentimentType: typeof item.sentiment,
+              publishedAt: item.published_at,
+              confidence: item.confidence
+            });
+            
+            // Smart category detection based on title and content
+            const articleTitle = (item.title || item.headline || item.name || '').toLowerCase();
+            const content = (item.description || item.summary || item.content || '').toLowerCase();
+            const text = `${articleTitle} ${content}`;
+            
+            let category = 'cryptocurrency'; // default
+            
+            if (text.includes('bitcoin') || text.includes('btc')) {
+              category = 'bitcoin';
+            } else if (text.includes('ethereum') || text.includes('eth')) {
+              category = 'ethereum';
+            } else if (text.includes('defi') || text.includes('decentralized finance')) {
+              category = 'defi';
+            } else if (text.includes('nft') || text.includes('non-fungible')) {
+              category = 'nft';
+            } else if (text.includes('blockchain')) {
+              category = 'blockchain';
+            } else if (text.includes('trading') || text.includes('exchange')) {
+              category = 'trading';
+            } else if (text.includes('regulation') || text.includes('regulatory')) {
+              category = 'regulation';
+            } else if (text.includes('technology') || text.includes('tech')) {
+              category = 'technology';
+            } else if (text.includes('market') || text.includes('analysis')) {
+              category = 'market-analysis';
+            }
+            
+            // Clean and validate the data
+            const title = item.title || item.headline || item.name || 'Financial News Update';
+            const summary = item.description || item.summary || item.content || title; // Use title as fallback
+            const source = item.source || item.domain || 'Financial Source';
+            const publishedAt = item.published_at || item.timestamp || item.date || new Date().toISOString();
+            const url = item.url || item.link || item.source_url || '#';
+            
+            // Validate sentiment field
+            let sentiment = 'neutral';
+            if (item.sentiment && typeof item.sentiment === 'string') {
+                // Check if sentiment is a valid value
+                if (['positive', 'negative', 'neutral'].includes(item.sentiment.toLowerCase())) {
+                    sentiment = item.sentiment.toLowerCase();
+                } else {
+                    // If sentiment is not valid (like a timestamp), determine from score
+                    const score = parseFloat(item.score) || 0;
+                    if (score > 0.1) {
+                        sentiment = 'positive';
+                    } else if (score < -0.1) {
+                        sentiment = 'negative';
+                    } else {
+                        sentiment = 'neutral';
+                    }
+                    console.warn(`Invalid sentiment "${item.sentiment}" for article "${title}", using score-based sentiment: ${sentiment}`);
+                }
+            }
+            
+            const confidence = (typeof item.confidence === 'number' && item.confidence > 0) ? item.confidence : 0.5;
+            
             return {
               id: index + 1,
-              title: item.title || item.headline || item.name || 'Financial News Update',
-              summary: item.description || item.summary || item.content || 'Market analysis and financial insights',
-              category: item.category || item.type || 'crypto',
-              source: item.source || item.domain || 'Financial Source',
-              publishedAt: item.published_at || item.timestamp || item.date || new Date().toISOString(),
+              title: title,
+              summary: summary,
+              category: category,
+              source: source,
+              publishedAt: publishedAt,
               image: item.image || `https://picsum.photos/300/200?random=${index}`,
-              url: item.url || item.link || item.source_url || '#',
-              sentiment: (item.sentiment && typeof item.sentiment === 'string') ? item.sentiment : 'neutral',
-              confidence: (typeof item.confidence === 'number') ? item.confidence : 0.5,
+              url: url,
+              sentiment: sentiment,
+              confidence: confidence,
               keywords: Array.isArray(item.keywords) ? item.keywords : (Array.isArray(item.tags) ? item.tags : [])
             };
           });
           
-          setNews(transformedNews);
+          // Filter out obviously bad data
+          const validNews = transformedNews.filter(article => {
+            // Filter out articles with unrealistic titles
+            const title = article.title.toLowerCase();
+            const url = article.url.toLowerCase();
+            
+            const badPatterns = [
+              'bitcoin reaches new all-time high of $100',
+              'bitcoin reaches new all-time high of $100,000',
+              'bitcoin surges past $50',
+              'test article',
+              'placeholder',
+              'sample data',
+              'example.com',
+              'mock data',
+              'fake news'
+            ];
+            
+            const hasBadPattern = badPatterns.some(pattern => 
+              title.includes(pattern) || url.includes(pattern)
+            );
+            
+            // Additional validation
+            const hasValidUrl = article.url && !article.url.includes('example.com');
+            const hasValidTitle = article.title.length > 10;
+            const hasValidDate = article.publishedAt && !article.publishedAt.includes('example.com');
+            
+            return !hasBadPattern && hasValidTitle && hasValidUrl && hasValidDate;
+          });
+          
+          setNews(validNews);
           setError(null);
+          
+          // Debug: Show category distribution
+          const categoryCount = transformedNews.reduce((acc, item) => {
+            acc[item.category] = (acc[item.category] || 0) + 1;
+            return acc;
+          }, {});
+          console.log('📊 Category distribution:', categoryCount);
           
           // Show storage confirmation if available
           if (newsData.data.stored_count !== undefined) {
@@ -141,6 +242,7 @@ const News = () => {
       }
     };
 
+  useEffect(() => {
     fetchEnhancedNews();
     fetchCategories();
     fetchWarehouseStats();
@@ -149,17 +251,47 @@ const News = () => {
 
   const filteredNews = selectedCategory === 'all' 
     ? news 
-    : news.filter(item => item.category === selectedCategory);
+    : news.filter(item => {
+        // Case-insensitive category matching
+        const matches = item.category && item.category.toLowerCase() === selectedCategory.toLowerCase();
+        if (selectedCategory !== 'all') {
+          console.log(`Filtering: "${item.category}" vs "${selectedCategory}" = ${matches}`);
+        }
+        return matches;
+      });
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      if (!dateString) return 'No date';
+      
+      // Handle different date formats
+      let date;
+      if (dateString.includes('T') && dateString.includes('Z')) {
+        // ISO format: 2025-09-02T08:25:59Z
+        date = new Date(dateString);
+      } else if (dateString.includes(' ')) {
+        // Format: 2025-09-03 09:43:58
+        date = new Date(dateString.replace(' ', 'T'));
+      } else {
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.warn('Date formatting error:', error, 'for date:', dateString);
+      return 'Invalid date';
+    }
   };
 
   const getSentimentColor = (sentiment) => {
@@ -223,7 +355,7 @@ const News = () => {
               <div key={topic} className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-blue-800">{topic}</span>
-                  <span className="text-xs text-blue-600">{data.count || 0} mentions</span>
+                  <span className="text-xs text-blue-600">{data.mentions || 0} mentions</span>
                 </div>
                 <p className="text-sm text-gray-700">{data.description || 'Market trending topic'}</p>
               </div>
