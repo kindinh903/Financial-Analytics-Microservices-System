@@ -1,107 +1,112 @@
-# AI Prediction Service Documentation
+# AI Prediction Service - Báo cáo & Hướng dẫn sử dụng
 
-## Tổng quan
+## 1. Hướng dẫn train model
 
-Service này cung cấp các API dự đoán giá tài sản tài chính (crypto) dựa trên dữ liệu nến (OHLCV) và sentiment. Service sử dụng FastAPI, các model ML (LightGBM/XGBoost/RandomForest), và hỗ trợ huấn luyện lại model từ dữ liệu lịch sử.
+Bạn có thể train lại các model dự đoán giá cho từng cặp coin và khung thời gian bằng script `train_all.py`.
 
----
+### Các bước thực hiện:
+  pip install -r requirements.txt
+1. **Thay đổi danh sách symbol và interval**  
+   - Mở file `app/config.py`
+   - Sửa các biến `SYMBOL_WHITELIST` và `INTERVALS` để chọn các cặp coin + interval muốn train.
 
-## Cấu trúc thư mục
+2. **Chạy train model**
+   - Mở terminal tại thư mục `ai-service`
+   - Chạy lệnh:
+     ```bash
+     PYTHONPATH=. python train/train_all.py
+     ```
+   - Các model sau khi train sẽ được lưu vào thư mục `models/` và tự động upload lên MinIO (nếu cấu hình MinIO đúng).
 
-```
-ai-service/
-├── app.py
-├── requirements.txt
-├── app/
-│   ├── main.py         # Entry point cho FastAPI service
-│   ├── predictor.py    # Logic dự đoán giá tiếp theo
-│   ├── config.py       # Cấu hình symbol, interval, v.v.
-│   ├── sentiment_fng.py# Xử lý sentiment FNG
-│   ├── model_store.py  # Lưu/tải model
-│   └── ...             # Các module phụ trợ khác
-├── train/
-│   ├── train_all.py    # Huấn luyện model cho tất cả symbol/interval
-│   ├── train_one.py    # Huấn luyện model cho một symbol/interval
-│   ├── utils.py        # Hỗ trợ xử lý dữ liệu
-│   └── ...             # Các script train khác
-└── data/
-    └── hist/           # Lưu file CSV lịch sử giá
-```
+**Lưu ý:**  
+- Nếu không chạy lại train, bạn vẫn có thể sử dụng các model đã có sẵn trong thư mục `models/` trên máy.
 
 ---
 
-## Các API chính
+## 2. Danh sách các symbol và interval được hỗ trợ
 
-### 1. Health Check
+- **Symbol (cặp coin):**
+  - BTCUSDT
+  - ETHUSDT
+  - BNBUSDT
+  - SOLUSDT
+  - ADAUSDT
+  - XRPUSDT
+  - DOGEUSDT
+  - DOTUSDT
+  - LTCUSDT
 
-- **Endpoint:** `/health`
-- **Method:** `GET`
-- **Trả về:** `"OK"`
+- **Interval (khung thời gian):**
+  - 1m, 3m, 5m, 15m, 30m
+  - 1h, 2h, 4h, 6h, 8h, 12h
+  - 1d, 3d, 1w, 1M
 
-### 2. Dự đoán giá tiếp theo
+Bạn có thể thay đổi các giá trị này trong file [config.py](http://_vscodecontentref_/0) để mở rộng hoặc thu hẹp phạm vi dự đoán.
 
-- **Endpoint:** `/predict`
-- **Method:** `POST`
-- **Request Body:**
-    ```json
+--
+
+
+## 3. Hướng dẫn sử dụng API
+
+### Dự đoán giá tiếp theo
+POST /predict
+Content-Type: application/json
+
+{
+  "data": [
     {
-      "data": [ { "symbol": "...", "interval": "...", "open": ..., "close": ..., ... } ],
-      "model_dir": "models"
-    }
-    ```
-- **Trả về:**
-    ```json
-    {
-      "status": "success",
-      "result": {
-        "symbol": "...",
-        "interval": "...",
-        "last_close": ...,
-        "predicted_next_close": ...,
-        "trend": "UP|DOWN",
-        "change_percent": ...
-      }
-    }
-    ```
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": ...,
+      "high": ...,
+      "low": ...,
+      "close": ...,
+      "volume": ...,
+      "close_time": ...
+    },
+    ...
+  ]
+}
+data: danh sách các cây nến OHLCV (ít nhất 25 nến gần nhất).
+Kết quả trả về:
 
----
+{
+  "status": "success",
+  "result": {
+    "symbol": "BTCUSDT",
+    "interval": "1m",
+    "last_close": 108310.0,
+    "predicted_next_close": 108315.5,
+    "trend": "UP",
+    "change_percent": 0.51
+  }
+}
 
-## Quy trình hoạt động
+Flow hoạt động khi gọi API /predict của ai-prediction service như sau:
 
-1. **Nhận dữ liệu OHLCV từ client** qua API `/predict`.
-2. **Tiền xử lý dữ liệu**: Tạo các feature kỹ thuật, sentiment, lag features.
-3. **Tải model đã huấn luyện** từ thư mục model tương ứng.
-4. **Dự đoán giá tiếp theo** dựa trên dữ liệu mới nhất.
-5. **Trả về kết quả dự đoán** (giá, xu hướng, phần trăm thay đổi).
+- Client gửi request POST /predict
 
----
+  - Dữ liệu gửi lên gồm danh sách các cây nến OHLCV (ít nhất 20-25 nến), mỗi nến có các trường: symbol, interval, open, high, low, close, volume, close_time.
 
-## Huấn luyện lại model:
+- FastAPI nhận request
 
-- **Script:** `train/train_all.py`
-- **Chức năng:** Tự động fetch dữ liệu từ Binance, merge sentiment, lưu file CSV, và huấn luyện model cho từng symbol/interval.
-- **Chạy lệnh:**
-    ```bash
-    PYTHONPATH=. python3 train/train_all.py
-    ```
-- **Kết quả:** Model được lưu tại `models/{symbol}_{interval}/model.pkl`.
+  - Hàm predict trong main.py nhận dữ liệu, chuyển thành DataFrame.
 
----
+- Kiểm tra dữ liệu đầu vào
 
-## Yêu cầu cài đặt
-```
-fastapi
-uvicorn
-pandas
-requests
-pydantic
-u8darts[prophet]
-scikit-learn
-joblib
-python-dotenv
-```
+  - Nếu thiếu trường symbol hoặc interval, trả về lỗi 400.
+  - Nếu thiếu trường datetime, sẽ tự tạo từ close_time.
 
-Cài đặt:
-```bash
-pip install -r requirements.txt
-```
+- Tiến hành dự đoán
+
+  - Gọi hàm predict_next_close trong predictor.py.
+  - Hàm này sẽ:
+    - Merge dữ liệu sentiment FNG vào OHLCV.
+    - Tiền xử lý, tạo các feature kỹ thuật.
+    - Load model và meta phù hợp từ thư mục model (hoặc tải từ MinIO nếu chưa có).
+    - Chuẩn bị dữ liệu đầu vào cho model.
+    - Dự đoán giá close tiếp theo.
+
+- Trả về kết quả
+  - Kết quả gồm: symbol, interval, last_close, predicted_next_close, trend (UP/DOWN), change_percent.
+  - Trả về dạng JSON cho client.
