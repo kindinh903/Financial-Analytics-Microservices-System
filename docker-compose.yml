@@ -164,6 +164,7 @@ services:
       - redis
       - auth-service
       - price-service
+      - user-service
       - crawler
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -172,10 +173,18 @@ services:
       retries: 3
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./frontend:/app         # Mount source code
+      - /app/node_modules       # Exclude node_modules from volume mount
     depends_on:
       - gateway
     healthcheck:

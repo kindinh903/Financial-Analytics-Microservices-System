@@ -28,7 +28,8 @@ const Charts = () => {
     const fetchSymbols = async () => {
       try {
         const response = await priceService.getAvailableSymbols();
-        setAvailableSymbols(response.data || popularSymbols);
+        const symbols = response.data || popularSymbols;
+        setAvailableSymbols(Array.isArray(symbols) ? symbols : popularSymbols);
       } catch (err) {
         console.warn('Using fallback symbols:', err);
         setAvailableSymbols(popularSymbols);
@@ -112,7 +113,7 @@ const Charts = () => {
               onChange={(e) => setSelectedSymbol(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             >
-              {availableSymbols.map((symbol) => (
+              {(Array.isArray(availableSymbols) ? availableSymbols : popularSymbols).map((symbol) => (
                 <option key={symbol} value={symbol}>
                   {symbol}
                 </option>

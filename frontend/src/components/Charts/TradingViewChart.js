@@ -24,7 +24,6 @@ const TradingViewChart = ({ symbol = 'BTCUSD', timeframe = '1D', data = [] }) =>
   const handleChartLoad = () => {
     setIsLoading(false);
   };
-
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-4 border-b border-gray-200">
