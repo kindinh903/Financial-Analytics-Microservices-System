@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import warnings
 from app.config import settings
+from train.minio_client import minio_client
+
 
 MODEL_DIR = Path("./models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -169,31 +171,28 @@ def prepare_features_and_target(df: pd.DataFrame, seq_len=20):
 
     return X, y, feature_cols, timestamps, last_close_for_row
 
-
 def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
               test_size_ratio=0.1, val_size_ratio=0.1, random_state=42,
               n_estimators=1000, learning_rate=0.05):
     """
     Train model cho 1 symbol-interval. Lưu file model và metadata để dùng khi predict.
-    Trả về đường dẫn model và metrics.
+    Sau khi lưu xong, tự động load model + meta vào memory và trả về.
     """
     # prepare data
     X, y, feature_cols, timestamps, last_close = prepare_features_and_target(df.copy(), seq_len=seq_len)
     if len(X) < 200:
         print(f"[{symbol}-{interval}] Warning: too few rows after feature creation: {len(X)}. Consider fetching more history.")
+
     # time-based split: train / val / test (by index)
     n = len(X)
     test_n = max(1, int(n * test_size_ratio))
     val_n = max(1, int(n * val_size_ratio))
-
-    X_train = X[: n - val_n - test_n]
-    y_train = y[: n - val_n - test_n]
-    X_val = X[n - val_n - test_n: n - test_n]
-    y_val = y[n - val_n - test_n: n - test_n]
-    X_test = X[n - test_n:]
-    y_test = y[n - test_n:]
+    X_train, y_train = X[: n - val_n - test_n], y[: n - val_n - test_n]
+    X_val, y_val = X[n - val_n - test_n: n - test_n], y[n - val_n - test_n: n - test_n]
+    X_test, y_test = X[n - test_n:], y[n - test_n:]
 
     print(f"[{symbol}-{interval}] Samples: total={n}, train={len(X_train)}, val={len(X_val)}, test={len(X_test)}")
+
     model_metadata = {
         "symbol": symbol,
         "interval": interval,
@@ -203,7 +202,7 @@ def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
         "backend": MODEL_BACKEND
     }
 
-    # choose model backend
+    # chọn backend
     if MODEL_BACKEND == "lightgbm":
         model = lgb.LGBMRegressor(
             n_estimators=5000,
@@ -214,41 +213,27 @@ def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
             random_state=42,
             n_jobs=-1
         )
-
-        model.fit(
-            X_train, y_train,
-            eval_set=[(X_val, y_val)],
-            callbacks=[lgb.early_stopping(stopping_rounds=50)],  # ✅ dùng callbacks
-        )
-
+        model.fit(X_train, y_train, eval_set=[(X_val, y_val)],
+                  callbacks=[lgb.early_stopping(stopping_rounds=50)])
     elif MODEL_BACKEND == "xgboost":
         model = xgb.XGBRegressor(objective="reg:squarederror", n_estimators=n_estimators,
                                  learning_rate=learning_rate, n_jobs=-1)
         model.fit(X_train, y_train, eval_set=[(X_val, y_val)], early_stopping_rounds=50, verbose=50)
     else:
-        # fallback RandomForest (slower + less tuned)
         model = RandomForestRegressor(n_estimators=200, n_jobs=-1, random_state=random_state)
         model.fit(X_train, y_train)
 
     # evaluate
-    def inv_transform_logreturn_to_price(last_close_scalar, pred_log_return):
-        return last_close_scalar * np.exp(pred_log_return)
-
-    y_pred_test_lr = model.predict(X_test)
-    # convert to price for intuitive metrics
     last_closes_test = last_close.values[-len(y_test):].astype(float) if hasattr(last_close, "values") else np.array(last_close[-len(y_test):], dtype=float)
     y_test_prices = last_closes_test * np.exp(y_test)
-    y_pred_prices = last_closes_test * np.exp(y_pred_test_lr)
-
+    y_pred_prices = last_closes_test * np.exp(model.predict(X_test))
     rmse = mean_squared_error(y_test_prices, y_pred_prices)
     mae = mean_absolute_error(y_test_prices, y_pred_prices)
     print(f"[{symbol}-{interval}] Test RMSE (price) = {rmse:.6f}, MAE = {mae:.6f}")
 
     # Save model + metadata
-    # out_dir = MODEL_DIR / f"{symbol}_{interval}"
     interval_safe = settings.interval_map.get(interval, interval)
     out_dir = MODEL_DIR / f"{symbol}_{interval_safe}"
-
     out_dir.mkdir(parents=True, exist_ok=True)
     model_path = out_dir / "model.pkl"
     meta_path = out_dir / "meta.json"
@@ -256,62 +241,32 @@ def train_one(symbol: str, interval: str, df: pd.DataFrame, seq_len=20,
     joblib.dump(model, model_path)
     with open(meta_path, "w") as f:
         json.dump(model_metadata, f, indent=2, default=str)
-
     print(f"✅ Saved model to {model_path} and metadata to {meta_path}")
 
-    return {
-        "model_path": str(model_path),
-        "meta_path": str(meta_path),
-        "test_metrics": {"rmse_price": float(rmse), "mae_price": float(mae)}
+    # Upload model + meta lên MinIO luôn
+    upload_to_minio(symbol, interval_safe, out_dir)
+
+    return { 
+        "model_path": str(model_path), 
+        "meta_path": str(meta_path), 
+        "test_metrics": {
+            "rmse_price": float(rmse), 
+            "mae_price": float(mae)
+        } 
     }
 
 
-def predict_next_close(symbol: str, interval: str, recent_df: pd.DataFrame,
-                       model_dir=MODEL_DIR):
+
+def upload_to_minio(symbol: str, interval: str, model_dir: Path):
     """
-    recent_df: phải chứa đủ history để tạo feature (>= seq_len + 30 recommended),
-               cột bắt buộc: 'close', optional 'volume', 'sentiment', và timestamp column.
-
-    Trả về: dict {predicted_close, predicted_log_return, model_meta}
+    Upload model.pkl và meta.json lên MinIO.
     """
-    out_dir = model_dir / f"{symbol}_{interval}"
-    model_path = out_dir / "model.pkl"
-    meta_path = out_dir / "meta.json"
-    if not model_path.exists() or not meta_path.exists():
-        raise FileNotFoundError(f"Model or meta not found for {symbol}-{interval} at {out_dir}")
-
-    model = joblib.load(model_path)
-    with open(meta_path, "r") as f:
-        meta = json.load(f)
-
-    seq_len = meta.get("seq_len", 20)
-    feature_cols = meta["feature_columns"]
-
-    # Prepare features on recent_df (same pipeline)
-    df_local = recent_df.copy()
-    df_local = ensure_datetime(df_local)
-    if "sentiment" not in df_local.columns:
-        df_local["sentiment"] = 0.0
-    df_local = compute_technical_indicators(df_local)
-    df_local = create_lag_features(df_local, seq_len=seq_len, use_close_lags=True)
-
-    # take last row that has no NaNs in feature_cols
-    candidate = df_local[feature_cols].tail(1)
-    if candidate.isnull().any(axis=None):
-        # try to drop rows with NaN and use last available row
-        candidate = df_local[feature_cols].dropna().tail(1)
-        if len(candidate) == 0:
-            raise ValueError("Not enough history or features contain NaN. Provide more candles.")
-
-    X_pred = candidate.values.astype(float)
-    pred_log_return = float(model.predict(X_pred)[0])
-
-    last_close = float(df_local["close"].dropna().iloc[-1])
-    predicted_close = last_close * np.exp(pred_log_return)
-
-    return {
-        "predicted_close": float(predicted_close),
-        "predicted_log_return": float(pred_log_return),
-        "last_close": float(last_close),
-        "meta": meta
-    }
+    files = ["model.pkl", "meta.json"]
+    for file in files:
+        local_path = model_dir / file
+        object_name = f"{symbol}_{interval}/{file}"
+        if local_path.exists():
+            minio_client.fput_object(settings.BUCKET_NAME, object_name, str(local_path))
+            print(f"✅ Uploaded {object_name} to MinIO")
+        else:
+            print(f"⚠️ {local_path} not found, skipping upload")

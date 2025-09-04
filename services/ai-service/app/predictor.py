@@ -49,9 +49,9 @@ def predict_next_close(df: pd.DataFrame, model_dir: str = "models") -> dict:
     interval_safe = settings.interval_map.get(interval, interval)
 
 
-    model_path =Path(model_dir) / f"{symbol}_{interval_safe}/model.pkl"
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model not found: {model_path}")
+    # model_path =Path(model_dir) / f"{symbol}_{interval_safe}/model.pkl"
+    # if not model_path.exists():
+    #     raise FileNotFoundError(f"Model not found: {model_path}")
 
     # Load model,meta.json để biết feature_columns
     model, meta = load_model(symbol, interval_safe, model_dir=model_dir)
