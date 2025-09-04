@@ -39,7 +39,7 @@ scheduler = BackgroundScheduler()
 # Track auto-crawling status
 auto_crawling_active = False
 auto_crawling_symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT', 'DOTUSDT']  # Default symbols to track
-auto_crawling_interval = 120  # 2 minutes default interval for better user experience
+auto_crawling_interval = 1800  # 30 minutes default interval to prevent NewsAPI rate limiting
 
 class EnhancedCrawlRequest(BaseModel):
     symbol: str
