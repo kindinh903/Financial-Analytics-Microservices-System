@@ -1,44 +1,30 @@
-const jwt = require('jsonwebtoken');
-
-// Middleware to authenticate JWT token
+// Middleware to extract user context from headers set by the Gateway
 const authenticateToken = async (req, res, next) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-    if (!token) {
-      return res.status(401).json({ 
-        error: 'Access token required',
-        message: 'No token provided in Authorization header'
+    const userId = req.header('x-user-id');
+    const role = req.header('x-user-role');
+    const email = req.header('x-user-email');
+    const firstName = req.header('x-user-first-name');
+    const lastName = req.header('x-user-last-name');
+    console.log('User context extracted from headers:', { userId, role, email, firstName, lastName });  
+    if (!userId) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Missing user context from gateway'
       });
     }
 
-    // Verify token using the same secret as auth service
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Add user info to request object
     req.user = {
-      _id: decoded.userId,
-      role: decoded.role
+      authUserId: userId,
+      role: role || 'user',
+      email,
+      firstName,
+      lastName
     };
-    req.token = token;
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ 
-        error: 'Invalid token',
-        message: 'Token is malformed or invalid'
-      });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        error: 'Token expired',
-        message: 'Access token has expired'
-      });
-    }
-    
     console.error('Authentication error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Authentication failed',
       message: 'Internal server error during authentication'
     });

@@ -28,18 +28,20 @@ const userSchema = new mongoose.Schema({
     trim: true,
     index: true
   },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    index: true
-  },
   // Role from auth service (for quick access)
   role: {
     type: String,
     enum: ['user', 'premium', 'admin'],
     default: 'user'
+  },
+  // Access permissions and feature flags
+  permissions: {
+    type: [String],
+    default: ['free']
+  },
+  features: {
+    type: [String],
+    default: ['basic-dashboard', 'news']
   },
   // Account status
   isActive: {
@@ -81,6 +83,27 @@ const userSchema = new mongoose.Schema({
       default: true
     }
   },
+  // Portfolio information
+  portfolio: [{
+    symbol: {
+      type: String,
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    avgPrice: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Additional profile fields
   avatar: String,
   bio: {
@@ -121,10 +144,14 @@ userSchema.statics.findByAuthId = function(authId) {
 userSchema.statics.findByEmailOrUsername = function(identifier) {
   return this.findOne({
     $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier }
+      { email: identifier.toLowerCase() }
+      // { username: identifier }
     ]
   });
 };
 
-module.exports = mongoose.model('User', userSchema); 
+// Add index for better performance
+userSchema.index({ 'portfolio.symbol': 1 });
+userSchema.index({ email: 1, isActive: 1 });
+
+module.exports = mongoose.model('User', userSchema);

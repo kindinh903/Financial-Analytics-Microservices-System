@@ -17,9 +17,14 @@ public class JwtService : IJwtService
 
     public string GenerateAccessToken(ApplicationUser user)
     {
+        return GenerateAccessToken(user, null);
+    }
+
+    public string GenerateAccessToken(ApplicationUser user, IDictionary<string, object?>? extraClaims)
+    {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
-        
+        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
@@ -30,6 +35,22 @@ public class JwtService : IJwtService
             new Claim("lastName", user.LastName)
         };
 
+        if (extraClaims != null)
+        {
+            foreach (var kvp in extraClaims)
+            {
+                if (kvp.Value is IEnumerable<string> list)
+                {
+                    foreach (var item in list)
+                        claims.Add(new Claim(kvp.Key, item));
+                }
+                else if (kvp.Value != null)
+                {
+                    claims.Add(new Claim(kvp.Key, kvp.Value.ToString()));
+                }
+            }
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
@@ -38,7 +59,7 @@ public class JwtService : IJwtService
             Issuer = _configuration["Jwt:Issuer"],
             Audience = _configuration["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -48,7 +69,7 @@ public class JwtService : IJwtService
     public string GenerateRefreshToken(ApplicationUser user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
 
         var claims = new List<Claim>
         {
@@ -64,7 +85,7 @@ public class JwtService : IJwtService
             Issuer = _configuration["Jwt:Issuer"],
             Audience = _configuration["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -76,7 +97,7 @@ public class JwtService : IJwtService
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
 
             var validationParameters = new TokenValidationParameters
             {
