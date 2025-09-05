@@ -112,9 +112,11 @@ services:
   #     timeout: 3s
   #     retries: 3
 
-  ai-service:
-    build: ./services/ai-service
-    container_name: ai-service
+
+
+  ai-predict-service:          # đổi tên service ở đây
+    build: ./services/ai-predict-service   # đường dẫn mới tới folder
+    container_name: ai-predict-service     # đặt lại tên container
     expose: ["8084"]         
     ports:
       - "8084:8084"
@@ -131,6 +133,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
 
   user-service:
     build: ./services/user-service
