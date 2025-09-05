@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pandas
+requests
+pydantic
+scikit-learn
+joblib
+python-dotenv
+numpy
+lightgbm
+xgboost
+pydantic_settings
+minio
