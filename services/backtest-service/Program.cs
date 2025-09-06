@@ -14,19 +14,24 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<BacktestDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add HttpClient for external services
-builder.Services.AddHttpClient<IAiService, AiService>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["Services:AiService:BaseUrl"] ?? "http://ai-service:8001");
-});
+// Add Mock Services for testing (comment out for production)
+builder.Services.AddScoped<IAiService, MockAiService>();
+builder.Services.AddScoped<IPriceService, MockPriceService>();
 
-builder.Services.AddHttpClient<IPriceService, PriceService>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["Services:PriceService:BaseUrl"] ?? "http://price-service:8084");
-});
+// Add HttpClient for external services (uncomment for production)
+// builder.Services.AddHttpClient<IAiService, AiService>(client =>
+// {
+//     client.BaseAddress = new Uri(builder.Configuration["Services:AiService:BaseUrl"] ?? "http://ai-service:8084");
+// });
+
+// builder.Services.AddHttpClient<IPriceService, PriceService>(client =>
+// {
+//     client.BaseAddress = new Uri(builder.Configuration["Services:PriceService:BaseUrl"] ?? "http://price-service:8081");
+// });
 
 // Add custom services
-builder.Services.AddScoped<IBacktestService, BacktestEngine>();
+builder.Services.AddScoped<IBacktestService, BacktestService.Services.BacktestService>();
+builder.Services.AddScoped<StrategyBacktestEngine>();
 builder.Services.AddScoped<IPerformanceMetricsService, PerformanceMetricsService>();
 
 // Configure CORS
@@ -49,7 +54,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();

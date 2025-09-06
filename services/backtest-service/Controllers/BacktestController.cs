@@ -104,6 +104,47 @@ namespace BacktestService.Controllers
         }
 
         /// <summary>
+        /// Get available trading strategies
+        /// </summary>
+        [HttpGet("strategies")]
+        public ActionResult<List<StrategyInfo>> GetAvailableStrategies()
+        {
+            try
+            {
+                var strategies = StrategyFactory.GetAvailableStrategies();
+                return Ok(strategies);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available strategies");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Get strategy information by name
+        /// </summary>
+        [HttpGet("strategies/{strategyName}")]
+        public ActionResult<StrategyInfo> GetStrategyInfo(string strategyName)
+        {
+            try
+            {
+                var strategyInfo = StrategyFactory.GetStrategyInfo(strategyName);
+                if (strategyInfo == null)
+                {
+                    return NotFound(new { error = $"Strategy '{strategyName}' not found" });
+                }
+
+                return Ok(strategyInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting strategy info for {StrategyName}", strategyName);
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
         /// Get backtest statistics summary
         /// </summary>
         [HttpGet("stats")]
@@ -129,7 +170,7 @@ namespace BacktestService.Controllers
                     AverageSharpeRatio = results.Average(r => r.SharpeRatio),
                     AverageMaxDrawdown = results.Average(r => r.MaxDrawdown),
                     BestPerformingBacktest = results.OrderByDescending(r => r.TotalReturnPercent).First(),
-                    WorstPerformingBacktest = results.OrderByAscending(r => r.TotalReturnPercent).First()
+                    WorstPerformingBacktest = results.OrderBy(r => r.TotalReturnPercent).First()
                 };
 
                 return Ok(stats);

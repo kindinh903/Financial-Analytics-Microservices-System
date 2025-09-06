@@ -21,6 +21,12 @@ namespace BacktestService.Models
         public string Strategy { get; set; } = "AI_PREDICTION";
         
         public Dictionary<string, object>? Parameters { get; set; }
+
+        public decimal MaxDrawdown { get; set; } = 0.1m;
+        
+        public decimal StopLoss { get; set; } = 0.05m;
+        
+        public decimal TakeProfit { get; set; } = 0.1m;
     }
 
     public class BacktestResult
@@ -59,6 +65,7 @@ namespace BacktestService.Models
         public decimal Quantity { get; set; }
         public decimal Commission { get; set; }
         public decimal PnL { get; set; }
+        [MaxLength(200)]
         public string Reason { get; set; } = string.Empty; // AI_PREDICTION, STOP_LOSS, TAKE_PROFIT
         public bool IsCorrect { get; set; }
     }

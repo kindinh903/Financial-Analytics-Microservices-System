@@ -36,6 +36,20 @@ services:
     volumes:
       - auth-db-data:/var/lib/postgresql/data
 
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $${SA_PASSWORD} -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+    restart: always
+
   # notification-service:
   #   build: ./services/notification-service
   #   container_name: notification-service
@@ -68,9 +82,12 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - KAFKA_ENABLED=false
     depends_on:
-      # - kafka
-      - redis
-      - influxdb
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 10s
@@ -94,23 +111,24 @@ services:
   #     timeout: 3s
   #     retries: 3
 
-  # backtest-service:
-  #   build: ./services/backtest-service
-  #   container_name: backtest-service
-  #   expose: ["8082"]         # Backtest service uses port 8082
-  #   environment:
-  #     - KAFKA_BROKER=kafka:9092
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-  #   depends_on:
-  #     - kafka
-  #     - redis
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 3
+  backtest-service:
+    build: ./services/backtest-service
+    container_name: backtest-service
+    expose: ["8080"]
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=BacktestDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
+      - Services__AiService__BaseUrl=http://ai-service:8084
+      - Services__PriceService__BaseUrl=http://price-service:8081
+    depends_on:
+      - sqlserver
+      - ai-service
+      - price-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   ai-service:
     build: ./services/ai-service

@@ -44,6 +44,18 @@ spring:
                 redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: '#{@ipKeyResolver}'
+        - id: backtest-health
+          uri: http://backtest-service:8080
+          predicates:
+            - Path=/api/backtest/health
+          filters:
+            - RewritePath=/api/backtest/health, /health
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: '#{@ipKeyResolver}'
         - id: user-service
           uri: http://user-service:8088
           predicates:
@@ -61,6 +73,19 @@ spring:
           uri: http://price-service:8081
           predicates:
             - Path=/api/price/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /api/${segment}
+            - name: AuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: '#{@ipKeyResolver}'
+        - id: backtest-service
+          uri: http://backtest-service:8080
+          predicates:
+            - Path=/api/backtest/**
           filters:
             - RewritePath=/api/(?<segment>.*), /api/${segment}
             - name: AuthenticationFilter
