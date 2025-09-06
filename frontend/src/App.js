@@ -9,6 +9,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile'; // Thêm dòng này
 import HomePage from './pages/HomePage';
+import Backtest from './pages/Backtest';
+import BacktestResults from './pages/BacktestResults';
+import BacktestHistory from './pages/BacktestHistory';
 
 
 function App() {
@@ -23,6 +26,9 @@ function App() {
         <Route path="/charts" element={<Layout><Charts /></Layout>} />
         <Route path="/portfolio" element={<Layout><Portfolio /></Layout>} />
         <Route path="/news" element={<Layout><News /></Layout>} />
+        <Route path="/backtest" element={<Layout><Backtest /></Layout>} />
+        <Route path="/backtest/history" element={<Layout><BacktestHistory /></Layout>} />
+        <Route path="/backtest/results/:id" element={<Layout><BacktestResults /></Layout>} />
       </Routes>
     </Router>
   );

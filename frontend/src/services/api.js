@@ -139,4 +139,35 @@ export const newsService = {
     api.get('/api/news/categories'),
 };
 
+// Backtest service endpoints
+export const backtestService = {
+  // Run a new backtest
+  runBacktest: (backtestRequest) =>
+    api.post('/api/backtest', backtestRequest),
+
+  // Get a specific backtest result by ID
+  getBacktestResult: (id) =>
+    api.get(`/api/backtest/${id}`),
+
+  // Get all backtest results with optional filtering
+  getBacktestResults: (params = {}) =>
+    api.get('/api/backtest', { params }),
+
+  // Delete a backtest result
+  deleteBacktestResult: (id) =>
+    api.delete(`/api/backtest/${id}`),
+
+  // Get available trading strategies
+  getAvailableStrategies: () =>
+    api.get('/api/backtest/strategies'),
+
+  // Get strategy information by name
+  getStrategyInfo: (strategyName) =>
+    api.get(`/api/backtest/strategies/${strategyName}`),
+
+  // Get backtest statistics summary
+  getBacktestStats: (params = {}) =>
+    api.get('/api/backtest/stats', { params }),
+};
+
 export default api;
