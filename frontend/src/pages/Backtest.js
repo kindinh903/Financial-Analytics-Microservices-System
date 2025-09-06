@@ -75,9 +75,31 @@ const Backtest = () => {
       // Fetch symbols
       try {
         const symbolsResponse = await priceService.getAvailableSymbols();
-        console.log('Symbols response:', symbolsResponse.data);
-        const symbolsData = symbolsResponse.data?.symbols || [];
+        console.log('Full symbols response:', symbolsResponse);
+        console.log('symbolsResponse.data:', symbolsResponse.data);
+        console.log('symbolsResponse.data.symbols:', symbolsResponse.data?.symbols);
+        
+        // Check different possible response structures
+        let symbolsData = [];
+        if (symbolsResponse.data?.symbols) {
+          symbolsData = symbolsResponse.data.symbols;
+        } else if (Array.isArray(symbolsResponse.data)) {
+          symbolsData = symbolsResponse.data;
+        } else if (symbolsResponse.data?.data?.symbols) {
+          symbolsData = symbolsResponse.data.data.symbols;
+        }
+        
+        console.log('Final symbolsData:', symbolsData);
         setAvailableSymbols(symbolsData);
+        
+        // Update formData.symbol if current symbol is not in the fetched list
+        if (symbolsData.length > 0 && !symbolsData.includes(formData.symbol)) {
+          console.log('Updating symbol from', formData.symbol, 'to', symbolsData[0]);
+          setFormData(prev => ({
+            ...prev,
+            symbol: symbolsData[0]
+          }));
+        }
       } catch (err) {
         console.error('Error fetching symbols:', err);
         setAvailableSymbols(['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 'XRPUSDT', 'DOGEUSDT', 'DOTUSDT', 'LTCUSDT']);
@@ -85,44 +107,17 @@ const Backtest = () => {
 
       // Fetch strategies
       try {
-        console.log('Attempting to fetch strategies...');
+        const response = await fetch('http://localhost:8080/api/backtest/strategies');
         
-        // Test with direct fetch first
-        console.log('Testing direct fetch...');
-        const directResponse = await fetch('http://localhost:8080/api/backtest/strategies');
-        console.log('Direct fetch status:', directResponse.status);
-        console.log('Direct fetch headers:', directResponse.headers.get('content-type'));
-        
-        if (directResponse.ok) {
-          const responseText = await directResponse.text();
-          console.log('Response text:', responseText);
-          
-          try {
-            // Try to parse as JSON
-            const directData = JSON.parse(responseText);
-            console.log('Parsed JSON data:', directData);
-            setAvailableStrategies(directData);
-            return; // Exit early if successful
-          } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            console.log('Raw response text:', responseText);
-          }
+        if (response.ok) {
+          const strategiesData = await response.json();
+          console.log('Strategies fetched:', strategiesData);
+          setAvailableStrategies(strategiesData);
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
-        // If direct fetch fails, try with axios
-        console.log('Trying with axios...');
-        const strategiesResponse = await backtestService.getAvailableStrategies();
-        console.log('Axios strategies response:', strategiesResponse);
-        
-        setAvailableStrategies(strategiesResponse.data);
       } catch (err) {
         console.error('Error fetching strategies:', err);
-        console.error('Error details:', {
-          message: err.message,
-          name: err.name,
-          code: err.code,
-          response: err.response
-        });
         
         setAvailableStrategies([
           { name: 'MOVING_AVERAGE_CROSSOVER', displayName: 'Moving Average Crossover' },
@@ -260,22 +255,23 @@ const Backtest = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Trading Pair
                 </label>
+                {/* Debug info */}
+                {console.log('Rendering select - availableSymbols:', availableSymbols, 'formData.symbol:', formData.symbol)}
                 <select
                   value={formData.symbol}
                   onChange={(e) => handleInputChange('symbol', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {/* Default option when no symbols loaded */}
+                  {/* Loading state */}
                   {availableSymbols.length === 0 && (
                     <option value="BTCUSDT">BTCUSDT (Loading...)</option>
                   )}
                   
-                  {/* Render symbols if available */}
-                  {Array.isArray(availableSymbols) && availableSymbols.length > 0 && 
+                  {/* Render symbols when available */}
+                  {availableSymbols.length > 0 && 
                     availableSymbols.map(symbol => (
-                      <option key={symbol.symbol || symbol} value={symbol.symbol || symbol}>
-                        {symbol.symbol || symbol} 
-                        {symbol.baseAsset && symbol.quoteAsset && ` (${symbol.baseAsset} / ${symbol.quoteAsset})`}
+                      <option key={symbol} value={symbol}>
+                        {symbol}
                       </option>
                     ))
                   }
