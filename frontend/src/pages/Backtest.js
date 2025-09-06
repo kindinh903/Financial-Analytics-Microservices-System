@@ -18,6 +18,8 @@ const Backtest = () => {
     lots: 10000,
     stopLoss: 2,
     takeProfit: 8,
+    selectedStrategy: '',
+    strategyParams: {},
     strategyConditions: [
       {
         id: 1,
@@ -37,6 +39,133 @@ const Backtest = () => {
       }
     ]
   });
+
+  // Hardcoded strategies from backend StrategyFactory
+  const strategies = [
+    {
+      name: "MOVING_AVERAGE_CROSSOVER",
+      displayName: "Moving Average Crossover",
+      description: "Generates signals based on the crossover of short and long moving averages",
+      requiresAI: false,
+      minimumDataPoints: 50,
+      defaultParameters: {
+        ShortPeriod: 10,
+        LongPeriod: 20,
+        Threshold: 0.001
+      },
+      parameters: [
+        {
+          name: "ShortPeriod",
+          displayName: "Short Period",
+          type: "int",
+          defaultValue: 10,
+          minValue: 1,
+          maxValue: 50,
+          description: "Period for short moving average"
+        },
+        {
+          name: "LongPeriod",
+          displayName: "Long Period", 
+          type: "int",
+          defaultValue: 20,
+          minValue: 1,
+          maxValue: 200,
+          description: "Period for long moving average"
+        },
+        {
+          name: "Threshold",
+          displayName: "Threshold",
+          type: "decimal",
+          defaultValue: 0.001,
+          minValue: 0.0,
+          maxValue: 0.1,
+          description: "Minimum price deviation threshold"
+        }
+      ]
+    },
+    {
+      name: "RSI",
+      displayName: "Relative Strength Index",
+      description: "Generates signals based on RSI oversold/overbought conditions",
+      requiresAI: false,
+      minimumDataPoints: 30,
+      defaultParameters: {
+        Period: 14,
+        OversoldThreshold: 30,
+        OverboughtThreshold: 70
+      },
+      parameters: [
+        {
+          name: "Period",
+          displayName: "RSI Period",
+          type: "int",
+          defaultValue: 14,
+          minValue: 2,
+          maxValue: 50,
+          description: "Period for RSI calculation"
+        },
+        {
+          name: "OversoldThreshold",
+          displayName: "Oversold Threshold",
+          type: "decimal",
+          defaultValue: 30,
+          minValue: 0,
+          maxValue: 50,
+          description: "RSI level considered oversold"
+        },
+        {
+          name: "OverboughtThreshold",
+          displayName: "Overbought Threshold",
+          type: "decimal",
+          defaultValue: 70,
+          minValue: 50,
+          maxValue: 100,
+          description: "RSI level considered overbought"
+        }
+      ]
+    },
+    {
+      name: "AI_PREDICTION",
+      displayName: "AI Prediction",
+      description: "Generates signals based on AI model predictions",
+      requiresAI: true,
+      minimumDataPoints: 100,
+      defaultParameters: {
+        ConfidenceThreshold: 0.6,
+        PredictionThreshold: 0.02,
+        UseTrendDirection: true
+      },
+      parameters: [
+        {
+          name: "ConfidenceThreshold",
+          displayName: "Confidence Threshold",
+          type: "decimal",
+          defaultValue: 0.6,
+          minValue: 0.0,
+          maxValue: 1.0,
+          description: "Minimum AI confidence required"
+        },
+        {
+          name: "PredictionThreshold",
+          displayName: "Prediction Threshold",
+          type: "decimal",
+          defaultValue: 0.02,
+          minValue: 0.0,
+          maxValue: 0.5,
+          description: "Minimum predicted price change"
+        },
+        {
+          name: "UseTrendDirection",
+          displayName: "Use Trend Direction",
+          type: "bool",
+          defaultValue: true,
+          minValue: null,
+          maxValue: null,
+          description: "Use trend direction instead of price prediction"
+        }
+      ]
+    }
+  ];
 
   const intervals = [
     { value: '1m', label: '1m' },
@@ -105,26 +234,8 @@ const Backtest = () => {
         setAvailableSymbols(['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 'XRPUSDT', 'DOGEUSDT', 'DOTUSDT', 'LTCUSDT']);
       }
 
-      // Fetch strategies
-      try {
-        const response = await fetch('http://localhost:8080/api/backtest/strategies');
-        
-        if (response.ok) {
-          const strategiesData = await response.json();
-          console.log('Strategies fetched:', strategiesData);
-          setAvailableStrategies(strategiesData);
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-      } catch (err) {
-        console.error('Error fetching strategies:', err);
-        
-        setAvailableStrategies([
-          { name: 'MOVING_AVERAGE_CROSSOVER', displayName: 'Moving Average Crossover' },
-          { name: 'RSI', displayName: 'Relative Strength Index' },
-          { name: 'AI_PREDICTION', displayName: 'AI Prediction' }
-        ]);
-      }
+      // Set hardcoded strategies instead of fetching
+      setAvailableStrategies(strategies);
     };
 
     fetchData();
@@ -179,20 +290,28 @@ const Backtest = () => {
     setError(null);
 
     try {
+      // Validate strategy selection
+      if (!formData.selectedStrategy) {
+        setError('Please select a trading strategy');
+        return;
+      }
+
       // Prepare backtest request
       const backtestRequest = {
         symbol: formData.symbol,
         interval: formData.interval,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
-        initialCapital: formData.lots,
-        stopLossPercent: formData.stopLoss,
-        takeProfitPercent: formData.takeProfit,
-        strategyName: 'CustomStrategy', // You might want to make this configurable
-        strategyParameters: {
-          conditions: formData.strategyConditions
-        }
+        initialBalance: formData.lots,
+        stopLoss: formData.stopLoss / 100, // Convert percentage to decimal
+        takeProfit: formData.takeProfit / 100, // Convert percentage to decimal
+        strategy: formData.selectedStrategy,
+        parameters: formData.strategyParams || {},
+        commission: 0.001, // Default commission
+        maxDrawdown: 0.1 // Default max drawdown
       };
+
+      console.log('Sending backtest request:', backtestRequest);
 
       const response = await backtestService.runBacktest(backtestRequest);
       
@@ -335,6 +454,112 @@ const Backtest = () => {
             <h2 className="text-lg font-medium text-gray-900 mb-6">Strategy</h2>
             
             <div className="space-y-6">
+              {/* Strategy Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Strategy
+                </label>
+                <select
+                  value={formData.selectedStrategy || ''}
+                  onChange={(e) => {
+                    const strategy = e.target.value;
+                    const selectedStrategyInfo = strategies.find(s => s.name === strategy);
+                    
+                    handleInputChange('selectedStrategy', strategy);
+                    
+                    // Initialize strategy parameters with default values
+                    if (selectedStrategyInfo) {
+                      const defaultParams = {};
+                      selectedStrategyInfo.parameters.forEach(param => {
+                        defaultParams[param.name] = param.defaultValue;
+                      });
+                      handleInputChange('strategyParams', defaultParams);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Choose a strategy...</option>
+                  {strategies.map(strategy => (
+                    <option key={strategy.name} value={strategy.name}>
+                      {strategy.displayName}
+                      {strategy.requiresAI && ' (AI Required)'}
+                    </option>
+                  ))}
+                </select>
+                
+                {/* Strategy Description */}
+                {formData.selectedStrategy && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      {strategies.find(s => s.name === formData.selectedStrategy)?.description}
+                    </p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-blue-600">
+                      <span>Min. Data Points: {strategies.find(s => s.name === formData.selectedStrategy)?.minimumDataPoints}</span>
+                      {strategies.find(s => s.name === formData.selectedStrategy)?.requiresAI && (
+                        <span className="bg-blue-200 px-2 py-1 rounded">AI Required</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Strategy Parameters */}
+              {formData.selectedStrategy && (
+                <div>
+                  <h3 className="text-md font-medium text-gray-900 mb-4">Strategy Parameters</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {strategies
+                      .find(s => s.name === formData.selectedStrategy)
+                      ?.parameters.map(param => (
+                        <div key={param.name} className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            {param.displayName}
+                            <span className="text-gray-500 text-xs ml-2">
+                              ({param.description})
+                            </span>
+                          </label>
+                          {param.type === 'bool' ? (
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={formData.strategyParams?.[param.name] ?? param.defaultValue}
+                                onChange={(e) => handleInputChange('strategyParams', {
+                                  ...formData.strategyParams,
+                                  [param.name]: e.target.checked
+                                })}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="ml-2 text-sm text-gray-600">
+                                {formData.strategyParams?.[param.name] ?? param.defaultValue ? 'Enabled' : 'Disabled'}
+                              </span>
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              value={formData.strategyParams?.[param.name] ?? param.defaultValue}
+                              onChange={(e) => handleInputChange('strategyParams', {
+                                ...formData.strategyParams,
+                                [param.name]: param.type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value)
+                              })}
+                              min={param.minValue}
+                              max={param.maxValue}
+                              step={param.type === 'decimal' ? '0.001' : '1'}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder={`Default: ${param.defaultValue}`}
+                            />
+                          )}
+                          {param.minValue !== null && param.maxValue !== null && (
+                            <p className="text-xs text-gray-500">
+                              Range: {param.minValue} - {param.maxValue}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+
               {/* Basic Parameters */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
