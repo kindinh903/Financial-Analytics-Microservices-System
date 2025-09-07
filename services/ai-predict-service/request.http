@@ -1,0 +1,242 @@
+### send 
+GET http://localhost:8001/data/sentiment/summary/BTCUSDT?days=1
+
+
+### send 
+POST http://localhost:8081/predict
+Content-Type: application/json
+
+{
+  "data": [
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108300.0,
+      "high": 108315.0,
+      "low": 108295.0,
+      "close": 108310.0,
+      "volume": 12.45,
+      "close_time": 1756515600000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108310.0,
+      "high": 108320.0,
+      "low": 108305.0,
+      "close": 108315.0,
+      "volume": 18.32,
+      "close_time": 1756515660000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108315.0,
+      "high": 108322.0,
+      "low": 108310.0,
+      "close": 108320.0,
+      "volume": 9.76,
+      "close_time": 1756515720000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108320.0,
+      "high": 108325.0,
+      "low": 108315.0,
+      "close": 108318.0,
+      "volume": 15.88,
+      "close_time": 1756515780000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108318.0,
+      "high": 108320.0,
+      "low": 108310.0,
+      "close": 108312.0,
+      "volume": 20.12,
+      "close_time": 1756515840000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108312.0,
+      "high": 108318.0,
+      "low": 108308.0,
+      "close": 108315.0,
+      "volume": 14.57,
+      "close_time": 1756515900000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108315.0,
+      "high": 108322.0,
+      "low": 108312.0,
+      "close": 108320.0,
+      "volume": 11.98,
+      "close_time": 1756515960000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108320.0,
+      "high": 108325.0,
+      "low": 108318.0,
+      "close": 108322.0,
+      "volume": 16.33,
+      "close_time": 1756516020000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108322.0,
+      "high": 108330.0,
+      "low": 108320.0,
+      "close": 108328.0,
+      "volume": 13.41,
+      "close_time": 1756516080000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108328.0,
+      "high": 108335.0,
+      "low": 108325.0,
+      "close": 108332.0,
+      "volume": 19.27,
+      "close_time": 1756516140000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108332.0,
+      "high": 108335.0,
+      "low": 108326.0,
+      "close": 108330.0,
+      "volume": 21.05,
+      "close_time": 1756516200000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108330.0,
+      "high": 108332.0,
+      "low": 108322.0,
+      "close": 108324.0,
+      "volume": 17.84,
+      "close_time": 1756516260000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108324.0,
+      "high": 108326.0,
+      "low": 108318.0,
+      "close": 108320.0,
+      "volume": 22.71,
+      "close_time": 1756516320000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108320.0,
+      "high": 108325.0,
+      "low": 108318.0,
+      "close": 108322.0,
+      "volume": 10.93,
+      "close_time": 1756516380000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108322.0,
+      "high": 108330.0,
+      "low": 108320.0,
+      "close": 108328.0,
+      "volume": 25.14,
+      "close_time": 1756516440000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108328.0,
+      "high": 108332.0,
+      "low": 108326.0,
+      "close": 108330.0,
+      "volume": 14.02,
+      "close_time": 1756516500000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108330.0,
+      "high": 108335.0,
+      "low": 108328.0,
+      "close": 108334.0,
+      "volume": 12.55,
+      "close_time": 1756516560000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108334.0,
+      "high": 108340.0,
+      "low": 108332.0,
+      "close": 108338.0,
+      "volume": 15.67,
+      "close_time": 1756516620000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108338.0,
+      "high": 108342.0,
+      "low": 108336.0,
+      "close": 108340.0,
+      "volume": 18.29,
+      "close_time": 1756516680000
+    },
+    {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108340.0,
+      "high": 108345.0,
+      "low": 108338.0,
+      "close": 108342.0,
+      "volume": 20.74,
+      "close_time": 1756516740000
+    },
+        {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108341.0,
+      "high": 108346.0,
+      "low": 108339.0,
+      "close": 108342.0,
+      "volume": 20.74,
+      "close_time": 1756516800000
+    },
+        {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108340.0,
+      "high": 108345.0,
+      "low": 108338.0,
+      "close": 108342.0,
+      "volume": 20.74,
+      "close_time": 1756516860000
+    },
+        {
+      "symbol": "BTCUSDT",
+      "interval": "1m",
+      "open": 108340.0,
+      "high": 108345.0,
+      "low": 108338.0,
+      "close": 108342.0,
+      "volume": 20.74,
+      "close_time": 1756516920000
+    }
+  ]
+}

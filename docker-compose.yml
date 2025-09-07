@@ -130,9 +130,11 @@ services:
       timeout: 3s
       retries: 3
 
-  ai-service:
-    build: ./services/ai-service
-    container_name: ai-service
+
+
+  ai-predict-service:          # đổi tên service ở đây
+    build: ./services/ai-predict-service   # đường dẫn mới tới folder
+    container_name: ai-predict-service     # đặt lại tên container
     expose: ["8084"]         
     ports:
       - "8084:8084"
@@ -149,6 +151,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
 
   user-service:
     build: ./services/user-service
@@ -318,7 +321,25 @@ services:
       timeout: 10s
       retries: 3
 
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
 volumes:
   mongodb_data:
   kafka-data:
   auth-db-data:
+  minio_data:
+
+
+
+  

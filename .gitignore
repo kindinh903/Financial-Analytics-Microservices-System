@@ -599,4 +599,5 @@ loki_data/
 charts/*.tgz
 
 
-services/ai-service/data
+services/ai-predict-service/data/hist
+services/ai-train-service/data/hist
