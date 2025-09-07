@@ -107,6 +107,14 @@ spring:
                 redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: '#{@ipKeyResolver}'
+        # WebSocket routes for price service
+        - id: price-websocket
+          uri: ws://price-service:8081
+          predicates:
+            - Path=/ws/**
+            - Header=Upgrade, websocket
+          filters:
+            - RewritePath=/ws/(?<segment>.*), /ws/${segment}
 management:
   endpoints:
     web:

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { priceService } from '../../services/api';
+import { useWebSocketChart } from '../../hooks/useWebSocket';
 import ChartHeader from './ChartHeader';
 import IndicatorSelector from './IndicatorSelector';
 
@@ -14,44 +15,107 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showIndicatorSelector, setShowIndicatorSelector] = useState(false);
+  const [currentPrice, setCurrentPrice] = useState(0);
 
-  // Fetch real data from API
-  const fetchCandles = useCallback(async () => {
+  // Handle WebSocket candle updates
+  const handleCandleUpdate = useCallback((data) => {
+    console.log(`📨 WebSocket candle data for ${chartConfig.symbol}:`, data);
+    
+    if (data && data.candle) {
+      const newCandle = {
+        time: Math.floor(data.candle.close_time / 1000),
+        open: parseFloat(data.candle.open) || 0,
+        high: parseFloat(data.candle.high) || 0,
+        low: parseFloat(data.candle.low) || 0,
+        close: parseFloat(data.candle.close) || 0,
+        volume: parseFloat(data.candle.volume || 0)
+      };
+
+      setCandles(prevCandles => {
+        const updatedCandles = [...prevCandles];
+        const lastIndex = updatedCandles.length - 1;
+        
+        // Update the last candle if it's the same time, otherwise add new candle
+        if (lastIndex >= 0 && updatedCandles[lastIndex].time === newCandle.time) {
+          updatedCandles[lastIndex] = newCandle;
+        } else {
+          updatedCandles.push(newCandle);
+        }
+        
+        // Update chart
+        if (candleSeriesRef.current) {
+          candleSeriesRef.current.update(newCandle);
+        }
+        
+        // Update volume
+        if (volumeSeriesRef.current) {
+          const volumePoint = {
+            time: newCandle.time,
+            value: newCandle.volume,
+            color: newCandle.close > newCandle.open ? '#00C85180' : '#ff444480'
+          };
+          volumeSeriesRef.current.update(volumePoint);
+        }
+        
+        return updatedCandles;
+      });
+
+      setCurrentPrice(newCandle.close);
+    }
+  }, [chartConfig.symbol]);
+
+  // Handle WebSocket price updates
+  const handlePriceUpdate = useCallback((data) => {
+    if (data && data.price) {
+      setCurrentPrice(parseFloat(data.price) || 0);
+    }
+  }, []);
+
+  // Handle WebSocket errors
+  const handleWebSocketError = useCallback((error) => {
+    console.error(`❌ WebSocket error for ${chartConfig.symbol}:`, error);
+    setError('WebSocket connection error');
+  }, [chartConfig.symbol]);
+
+  // Use WebSocket hook
+  const { isConnected } = useWebSocketChart({
+    symbol: chartConfig.symbol,
+    interval: chartConfig.timeframe,
+    onCandleUpdate: handleCandleUpdate,
+    onPriceUpdate: handlePriceUpdate,
+    onError: handleWebSocketError,
+    enabled: isReady && !!chartConfig.symbol
+  });
+
+  // Fetch initial historical data
+  const fetchInitialData = useCallback(async () => {
     if (!chartConfig.symbol) return;
     
     try {
       setIsLoading(true);
       setError(null);
       
+      // Get historical data from API to populate the chart
       const res = await priceService.getCandles({ 
         symbol: chartConfig.symbol, 
         interval: chartConfig.timeframe, 
         limit: 500 
       });
       
-      console.log(`📈 API Response for ${chartConfig.symbol}:`, {
+      console.log(`📈 Initial API Response for ${chartConfig.symbol}:`, {
         status: res?.status,
         data: res?.data,
         candles: res?.data?.data,
-        type: typeof res?.data?.data,
-        isArray: Array.isArray(res?.data?.data),
         length: res?.data?.data?.length
       });
       
       const rawData = res?.data?.data || [];
-      console.log(`🎯 Final candles data for ${chartConfig.symbol}:`, rawData);
-      
-      // Check first few candles to see the structure
-      if (rawData.length > 0) {
-        console.log(`📊 First candle sample for ${chartConfig.symbol}:`, rawData[0]);
-        console.log(`📊 Last candle sample for ${chartConfig.symbol}:`, rawData[rawData.length - 1]);
-      }
       
       // Convert API data to LightweightCharts format
       const data = rawData.map(candle => {
         try {
           return {
-            time: Math.floor(candle.close_time / 1000), // Convert milliseconds to seconds
+            time: Math.floor(candle.close_time / 1000),
             open: parseFloat(candle.open) || 0,
             high: parseFloat(candle.high) || 0,
             low: parseFloat(candle.low) || 0,
@@ -62,12 +126,10 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
           console.error('Error converting candle data:', error, candle);
           return null;
         }
-      }).filter(Boolean); // Remove any null entries
+      }).filter(Boolean);
       
-      // Sort data by time in ascending order (oldest to newest)
+      // Sort and deduplicate
       data.sort((a, b) => a.time - b.time);
-      
-      // Remove duplicates and ensure unique timestamps
       const uniqueData = [];
       const seenTimes = new Set();
       
@@ -79,14 +141,14 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
       }
       
       console.log(`🔄 Converted ${uniqueData.length} candles for ${chartConfig.symbol}`);
+      
       if (uniqueData.length > 0) {
-        console.log(`📊 First converted candle:`, uniqueData[0]);
-        console.log(`📊 Last converted candle:`, uniqueData[uniqueData.length - 1]);
+        setCurrentPrice(uniqueData[uniqueData.length - 1].close);
       }
       
       setCandles(uniqueData);
       
-      // Update chart with real data
+      // Update chart with historical data
       if (candleSeriesRef.current && volumeSeriesRef.current) {
         candleSeriesRef.current.setData(uniqueData);
         
@@ -98,12 +160,13 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
         }));
         volumeSeriesRef.current.setData(volumeData);
         
-        // Update indicators with real data
+        // Update indicators with historical data
         updateIndicators(uniqueData);
       }
+      
     } catch (e) {
-      console.error(`❌ Error fetching data for ${chartConfig.symbol}:`, e);
-      setError(e.message || 'Failed to load candles');
+      console.error(`❌ Error fetching initial data for ${chartConfig.symbol}:`, e);
+      setError(e.message || 'Failed to load initial data');
     } finally {
       setIsLoading(false);
     }
@@ -358,19 +421,19 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
     initChart();
   }, []);
 
-  // Fetch data when chart config changes
+  // Fetch initial data when chart is ready
   useEffect(() => {
     if (isReady) {
-      fetchCandles();
+      fetchInitialData();
     }
-  }, [isReady, chartConfig.symbol, chartConfig.timeframe]);
+  }, [isReady, chartConfig.symbol, chartConfig.timeframe, fetchInitialData]);
 
   // Update indicators when indicators config changes
   useEffect(() => {
     if (isReady && candles.length > 0) {
       updateIndicators(candles);
     }
-  }, [isReady, chartConfig.indicators, updateIndicators]);
+  }, [isReady, chartConfig.indicators, updateIndicators, candles]);
 
   // Handle adding new indicator
   const handleAddIndicator = (indicatorConfig) => {
@@ -403,7 +466,6 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  const currentPrice = candles.length > 0 ? candles[candles.length - 1].close : 0;
   const priceChange = candles.length > 1 ? currentPrice - candles[candles.length - 2].close : 0;
   const priceChangePercent = candles.length > 1 ? (priceChange / candles[candles.length - 2].close) * 100 : 0;
 
@@ -420,6 +482,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
         priceChangePercent={priceChangePercent}
         onShowIndicatorSelector={() => setShowIndicatorSelector(true)}
         onRemoveIndicator={handleRemoveIndicator}
+        isConnected={isConnected}
       />
 
       {/* Chart Container */}
