@@ -248,42 +248,6 @@ const Backtest = () => {
     }));
   };
 
-  const handleConditionChange = (conditionId, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      strategyConditions: prev.strategyConditions.map(condition =>
-        condition.id === conditionId
-          ? { ...condition, [field]: value }
-          : condition
-      )
-    }));
-  };
-
-  const addNewCondition = () => {
-    const newId = Math.max(...formData.strategyConditions.map(c => c.id)) + 1;
-    setFormData(prev => ({
-      ...prev,
-      strategyConditions: [
-        ...prev.strategyConditions,
-        {
-          id: newId,
-          indicator1: 'SMA',
-          operator: 'Above',
-          indicator2: 'SMA',
-          period1: 10,
-          period2: 20,
-        }
-      ]
-    }));
-  };
-
-  const removeCondition = (conditionId) => {
-    setFormData(prev => ({
-      ...prev,
-      strategyConditions: prev.strategyConditions.filter(c => c.id !== conditionId)
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -577,7 +541,7 @@ const Backtest = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    SL:
+                    Stop Loss:
                   </label>
                   <input
                     type="number"
@@ -590,7 +554,7 @@ const Backtest = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    TP:
+                    Take Profit:
                   </label>
                   <input
                     type="number"
@@ -602,85 +566,6 @@ const Backtest = () => {
                 </div>
               </div>
 
-              {/* Strategy Conditions */}
-              <div className="space-y-4">
-                <h3 className="text-md font-medium text-gray-900">Strategy Conditions</h3>
-                
-                {formData.strategyConditions.map((condition, index) => (
-                  <div key={condition.id} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-gray-700">s{index}:</span>
-                      {formData.strategyConditions.length > 1 && (
-                        <button
-                          onClick={() => removeCondition(condition.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <div>
-                        <select
-                          value={condition.indicator1}
-                          onChange={(e) => handleConditionChange(condition.id, 'indicator1', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {indicators.map(indicator => (
-                            <option key={indicator.value} value={indicator.value}>
-                              {indicator.label}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          value={condition.period1}
-                          onChange={(e) => handleConditionChange(condition.id, 'period1', parseInt(e.target.value))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm mt-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="10"
-                        />
-                      </div>
-
-                      <div>
-                        <select
-                          value={condition.operator}
-                          onChange={(e) => handleConditionChange(condition.id, 'operator', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {operators.map(operator => (
-                            <option key={operator.value} value={operator.value}>
-                              {operator.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <select
-                          value={condition.indicator2}
-                          onChange={(e) => handleConditionChange(condition.id, 'indicator2', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {indicators.map(indicator => (
-                            <option key={indicator.value} value={indicator.value}>
-                              {indicator.label}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          value={condition.period2}
-                          onChange={(e) => handleConditionChange(condition.id, 'period2', parseInt(e.target.value))}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm mt-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="20"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {/* Action Buttons */}
               <div className="flex space-x-3">
                 <button
@@ -688,19 +573,6 @@ const Backtest = () => {
                   className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
                 >
                   Config Strategy
-                </button>
-                <button
-                  type="button"
-                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Upload model
-                </button>
-                <button
-                  type="button"
-                  onClick={addNewCondition}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                >
-                  Add new
                 </button>
               </div>
             </div>
