@@ -67,20 +67,31 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
       // Sort data by time in ascending order (oldest to newest)
       data.sort((a, b) => a.time - b.time);
       
-      console.log(`🔄 Converted ${data.length} candles for ${chartConfig.symbol}`);
-      if (data.length > 0) {
-        console.log(`📊 First converted candle:`, data[0]);
-        console.log(`📊 Last converted candle:`, data[data.length - 1]);
+      // Remove duplicates and ensure unique timestamps
+      const uniqueData = [];
+      const seenTimes = new Set();
+      
+      for (const candle of data) {
+        if (!seenTimes.has(candle.time)) {
+          seenTimes.add(candle.time);
+          uniqueData.push(candle);
+        }
       }
       
-      setCandles(data);
+      console.log(`🔄 Converted ${uniqueData.length} candles for ${chartConfig.symbol}`);
+      if (uniqueData.length > 0) {
+        console.log(`📊 First converted candle:`, uniqueData[0]);
+        console.log(`📊 Last converted candle:`, uniqueData[uniqueData.length - 1]);
+      }
+      
+      setCandles(uniqueData);
       
       // Update chart with real data
       if (candleSeriesRef.current && volumeSeriesRef.current) {
-        candleSeriesRef.current.setData(data);
+        candleSeriesRef.current.setData(uniqueData);
         
         // Set volume data
-        const volumeData = data.map(candle => ({
+        const volumeData = uniqueData.map(candle => ({
           time: candle.time,
           value: candle.volume,
           color: candle.close > candle.open ? '#00C85180' : '#ff444480'
@@ -88,7 +99,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
         volumeSeriesRef.current.setData(volumeData);
         
         // Update indicators with real data
-        updateIndicators(data);
+        updateIndicators(uniqueData);
       }
     } catch (e) {
       console.error(`❌ Error fetching data for ${chartConfig.symbol}:`, e);
