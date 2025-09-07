@@ -42,8 +42,18 @@ public class AuthController : ControllerBase
                 lastName = response.User.LastName,
                 email = response.User.Email
             };
-            await _kafkaPublisher.PublishUserRegistered(userEvent);
-            return CreatedAtAction(nameof(Register), response);
+            
+            // Publish to Kafka asynchronously without waiting (fire and forget)
+            _ = Task.Run(async () => {
+                try {
+                    await _kafkaPublisher.PublishUserRegistered(userEvent);
+                } catch (Exception ex) {
+                    Console.WriteLine($"Kafka publish error: {ex.Message}");
+                }
+            });
+            
+            // Return the response with tokens immediately
+            return Ok(response);
         }
 
         return BadRequest(response);

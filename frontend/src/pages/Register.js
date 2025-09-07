@@ -40,7 +40,7 @@ export default function Register() {
         localStorage.setItem('user', JSON.stringify(result.user));
         }
 
-        navigate('/'); // Chuyển hướng về trang chủ
+        navigate('/dashboard'); // Chuyển hướng về dashboard
       } else {
         alert('Đăng ký thất bại:\n' + result.message);
       }

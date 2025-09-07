@@ -126,6 +126,31 @@ export const userService = {
   // ✅ Thêm endpoint cập nhật address
   updateAddress: (address) =>
     api.put('/api/user/address', address),
+
+  // Admin endpoints
+  getAllUsers: () =>
+    api.get('/api/user/admin/users'),
+
+  getUserById: (userId) =>
+    api.get(`/api/user/admin/users/${userId}`),
+
+  updateUser: (userId, userData) =>
+    api.put(`/api/user/admin/users/${userId}`, userData),
+
+  createUser: (userData) =>
+    api.post('/api/user/admin/users', userData),
+
+  deleteUser: (userId) =>
+    api.delete(`/api/user/admin/users/${userId}`),
+
+  getAdminStats: () =>
+    api.get('/api/user/admin/stats'),
+
+  getSystemLogs: (params = {}) =>
+    api.get('/api/user/admin/logs', { params }),
+
+  updateSystemSettings: (settings) =>
+    api.put('/api/user/admin/settings', settings),
 };
 
 // News service endpoints

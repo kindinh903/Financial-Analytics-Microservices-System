@@ -11,4 +11,4 @@ joblib
 python-dotenv
 numpy
 lightgbm
-xgboost
+xgboosting

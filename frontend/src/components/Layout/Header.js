@@ -1,15 +1,37 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
+    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/charts', label: 'Charts', icon: '📈' },
     { path: '/portfolio', label: 'Portfolio', icon: '💼' },
     { path: '/news', label: 'News', icon: '📰' },
   ];
+
+  // Add admin nav item if user is admin
+  if (user?.role === 'admin') {
+    navItems.push({ path: '/admin', label: 'Admin Panel', icon: '⚙️' });
+  }
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -46,10 +68,36 @@ const Header = () => {
               <span className="sr-only">Notifications</span>
               🔔
             </button>
-            <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md">
-              <span className="sr-only">Settings</span>
-              ⚙️
-            </button>
+            
+            {user && (
+              <div className="flex items-center space-x-3">
+                <Link 
+                  to="/profile" 
+                  className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
+                >
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium">
+                      {user.firstName?.[0]}{user.lastName?.[0]}
+                    </span>
+                  </div>
+                  <span className="hidden md:block">
+                    {user.firstName} {user.lastName}
+                  </span>
+                  {user.role === 'admin' && (
+                    <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                      Admin
+                    </span>
+                  )}
+                </Link>
+                
+                <button 
+                  onClick={handleLogout}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
