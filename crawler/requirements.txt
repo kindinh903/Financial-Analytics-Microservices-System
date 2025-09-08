@@ -21,6 +21,9 @@ fastapi>=0.104.0
 uvicorn>=0.24.0
 pydantic>=2.0.0
 
+# Background task scheduling
+APScheduler>=3.10.0
+
 # Additional dependencies for enhanced functionality
 soupsieve>=2.0  # CSS selector support for BeautifulSoup
 typing-extensions>=4.0.0  # Type hints support

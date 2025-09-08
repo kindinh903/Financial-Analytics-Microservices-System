@@ -27,9 +27,11 @@ import {
   CrownOutlined,
   CalendarOutlined,
   PhoneOutlined,
-  GlobalOutlined
+  GlobalOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import { userService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 
 const { Option } = Select;
@@ -43,6 +45,7 @@ const Profile = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUserProfile();
@@ -296,6 +299,21 @@ const Profile = () => {
                         <Tag key={index} size="small">{feature}</Tag>
                       ))}
                     </div>
+                  </div>
+                )}
+                
+                {/* Admin Panel Access Button */}
+                {user.role === 'admin' && (
+                  <div className="mt-4 pt-4 border-t">
+                    <Button 
+                      type="primary" 
+                      icon={<DashboardOutlined />}
+                      onClick={() => navigate('/admin')}
+                      className="w-full"
+                      size="large"
+                    >
+                      Admin Panel
+                    </Button>
                   </div>
                 )}
               </div>

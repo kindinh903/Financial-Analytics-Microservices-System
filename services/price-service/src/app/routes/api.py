@@ -86,3 +86,46 @@ async def get_top_movers(limit: int = 10):
     except Exception as e:
         logger.error(f"[API] Error in get_top_movers: {str(e)}")
         return {"error": str(e), "data": []}
+
+# 4. Market overview (alias for market_snapshot)
+@router.get("/price/market-overview")
+async def get_market_overview():
+    try:
+        logger.info(f"[API] get_market_overview called")
+        # Use all available symbols for market overview
+        symbol_list = SYMBOL_WHITELIST
+        res = await price_service.get_market_snapshot(symbol_list)
+        logger.info(f"[API] get_market_overview returning data for {len(res) if res else 0} symbols")
+        return {"data": res}
+    except Exception as e:
+        logger.error(f"[API] Error in get_market_overview: {str(e)}")
+        return {"error": str(e), "data": []}
+
+# 5. Historical data (alias for candles endpoint)
+@router.get("/price/historical/{symbol}")
+async def get_historical_data(symbol: str, timeframe: str = '1h', limit: int = Query(100, le=1000)):
+    try:
+        logger.info(f"[API] get_historical_data called with symbol={symbol}, timeframe={timeframe}, limit={limit}")
+        
+        # Map timeframe to interval format
+        timeframe_map = {
+            '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', '30m': '30m',
+            '1h': '1h', '2h': '2h', '4h': '4h', '6h': '6h', '8h': '8h', '12h': '12h',
+            '1D': '1d', '1d': '1d', '3D': '3d', '3d': '3d', '1W': '1w', '1w': '1w', '1M': '1M'
+        }
+        
+        interval = timeframe_map.get(timeframe, '1h')
+        
+        # Validate symbol
+        if symbol not in SYMBOL_WHITELIST:
+            logger.warning(f"[API] Invalid symbol: {symbol}")
+            return {"error": f"Symbol {symbol} not supported", "data": []}
+        
+        # Get candles data
+        res = await price_service.get_candles(symbol, interval, limit=limit)
+        logger.info(f"[API] get_historical_data returning {len(res) if res else 0} candles")
+        return {"data": res}
+        
+    except Exception as e:
+        logger.error(f"[API] Error in get_historical_data: {str(e)}")
+        return {"error": str(e), "data": []}

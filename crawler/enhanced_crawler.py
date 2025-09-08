@@ -318,6 +318,12 @@ class EnhancedFinancialCrawler:
     def store_article_with_sentiment(self, article_data):
         """Store article and its sentiment analysis in the data warehouse"""
         try:
+            # Check for duplicates first
+            article_url = article_data.get('url', '')
+            if article_url and self.data_warehouse.article_exists_by_url(article_url):
+                logger.info(f"Article already exists, skipping: {article_url}")
+                return None
+            
             # Analyze sentiment
             text_for_analysis = article_data.get('content', '') or article_data.get('summary', '') or article_data.get('title', '')
             sentiment_result = self.analyze_sentiment_enhanced(text_for_analysis)
@@ -381,9 +387,15 @@ class EnhancedFinancialCrawler:
             
             # Add NewsAPI if available
             if self.news_api_key:
-                news_api_articles = await self.get_news_api_async(keywords, max_articles//2)
+                logger.info(f"Using NewsAPI to fetch news for keywords: {keywords}")
+                news_api_articles = await self.get_news_api_async(keywords, max_articles)
                 if news_api_articles:
+                    logger.info(f"NewsAPI returned {len(news_api_articles)} articles")
                     all_articles.extend(news_api_articles)
+                else:
+                    logger.warning("NewsAPI returned no articles")
+            else:
+                logger.warning("NewsAPI key not configured")
             
             # Add web scraping for major sources
             for domain, selectors in self.news_sources.items():
@@ -411,10 +423,13 @@ class EnhancedFinancialCrawler:
                     elif isinstance(result, Exception):
                         logger.error(f"Crawling task failed: {str(result)}")
             
-            # Add manual news as fallback
-            if len(all_articles) < max_articles:
+            # Add manual news as fallback only if we have very few articles
+            if len(all_articles) < 3:  # Only use manual news if we have less than 3 real articles
+                logger.info(f"Only {len(all_articles)} real articles found, adding manual news as fallback")
                 manual_news = self.get_manual_news_enhanced(keywords)
                 all_articles.extend(manual_news)
+            else:
+                logger.info(f"Found {len(all_articles)} real articles, skipping manual news fallback")
             
             # Store articles in data warehouse and enhance with sentiment
             enhanced_articles = []
@@ -459,12 +474,17 @@ class EnhancedFinancialCrawler:
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as response:
+                    logger.info(f"NewsAPI request status: {response.status}")
                     if response.status == 200:
                         data = await response.json()
+                        logger.info(f"NewsAPI response status: {data.get('status')}")
                         
                         if data.get('status') == 'ok':
                             articles = []
-                            for article in data.get('articles', []):
+                            raw_articles = data.get('articles', [])
+                            logger.info(f"NewsAPI returned {len(raw_articles)} raw articles")
+                            
+                            for article in raw_articles:
                                 # Analyze sentiment
                                 text_for_sentiment = f"{article.get('title', '')} {article.get('description', '')}"
                                 sentiment = self.analyze_sentiment_enhanced(text_for_sentiment)
@@ -480,7 +500,7 @@ class EnhancedFinancialCrawler:
                                     'crawled_at': datetime.now().isoformat()
                                 })
                             
-                                                         # Store articles in data warehouse
+                            # Store articles in data warehouse
                             for article in articles:
                                 try:
                                     enhanced_article = self.store_article_with_sentiment(article)
@@ -489,7 +509,12 @@ class EnhancedFinancialCrawler:
                                 except Exception as e:
                                     logger.error(f"Error enhancing NewsAPI article: {str(e)}")
                             
+                            logger.info(f"NewsAPI processed {len(articles)} articles successfully")
                             return articles
+                        else:
+                            logger.error(f"NewsAPI error: {data.get('message', 'Unknown error')}")
+                    else:
+                        logger.error(f"NewsAPI HTTP error: {response.status}")
             
             return []
             
@@ -498,70 +523,144 @@ class EnhancedFinancialCrawler:
             return []
     
     def get_manual_news_enhanced(self, keywords):
-        """Enhanced manual news with more variety and better sentiment"""
+        """Get real financial news by scraping actual news websites"""
         try:
-            # More diverse sample news
-            sample_news = [
-                {
-                    'title': 'Bitcoin Surges Past $50,000 as Institutional Adoption Grows',
-                     'description': 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021.',
-                     'content': 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021, driven by increased institutional adoption and positive market sentiment.',
-                     'url': 'https://example.com/bitcoin-surge',
-                     'source': 'Financial News',
-                     'published_at': datetime.now().isoformat(),
-                     'sentiment': self.analyze_sentiment_enhanced('Bitcoin Surges Past $50,000 as Institutional Adoption Grows')
-                 },
-                 {
-                     'title': 'Ethereum Network Upgrade Shows Promising Results',
-                     'description': 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees.',
-                     'content': 'The latest Ethereum network upgrade has demonstrated improved transaction speeds and reduced gas fees, boosting confidence in the platform.',
-                     'url': 'https://example.com/ethereum-upgrade',
-                     'source': 'Crypto News',
-                     'published_at': datetime.now().isoformat(),
-                     'sentiment': self.analyze_sentiment_enhanced('Ethereum Network Upgrade Shows Promising Results')
-                 },
-                 {
-                     'title': 'Crypto Market Crashes Amid Regulatory Fears',
-                     'description': 'Global crypto markets face significant decline as regulatory uncertainty spreads across major economies.',
-                     'content': 'Global crypto markets face significant decline as regulatory uncertainty spreads across major economies, causing panic selling among investors.',
-                     'url': 'https://example.com/market-crash',
-                     'source': 'Market Analysis',
-                     'published_at': datetime.now().isoformat(),
-                     'sentiment': self.analyze_sentiment_enhanced('Crypto Market Crashes Amid Regulatory Fears')
-                 },
-                 {
-                     'title': 'DeFi Protocols Show Strong Growth in Q4',
-                     'description': 'Decentralized finance protocols continue to expand with innovative lending and yield farming solutions.',
-                     'content': 'Decentralized finance protocols continue to expand with innovative lending and yield farming solutions, attracting significant capital inflows.',
-                     'url': 'https://example.com/defi-growth',
-                     'source': 'DeFi News',
-                     'published_at': datetime.now().isoformat(),
-                     'sentiment': self.analyze_sentiment_enhanced('DeFi Protocols Show Strong Growth in Q4')
-                 },
-                 {
-                     'title': 'Bitcoin Reaches New All-Time High of $100,000',
-                     'description': 'Bitcoin has achieved a historic milestone, reaching $100,000 for the first time ever.',
-                     'content': 'Bitcoin has achieved a historic milestone, reaching $100,000 for the first time ever, driven by massive institutional adoption and mainstream acceptance.',
-                     'url': 'https://example.com/bitcoin-ath',
-                     'source': 'Crypto News',
-                     'published_at': datetime.now().isoformat(),
-                     'sentiment': self.analyze_sentiment_enhanced('Bitcoin Reaches New All-Time High of $100,000')
-                 },
-                 {
-                     'title': 'Major Exchange Faces Security Breach',
-                     'description': 'A leading cryptocurrency exchange has reported a significant security breach affecting thousands of users.',
-                     'content': 'A leading cryptocurrency exchange has reported a significant security breach affecting thousands of users, raising concerns about platform security.',
-                     'url': 'https://example.com/security-breach',
-                     'source': 'Security News',
-                     'published_at': datetime.now().isoformat(),
-                     'sentiment': self.analyze_sentiment_enhanced('Major Exchange Faces Security Breach')
-                 }
-            ]
+            logger.info("Scraping real financial news websites...")
+            real_articles = []
             
-            return sample_news
+            # Scrape CoinDesk for real news articles
+            try:
+                coindesk_articles = self.scrape_coindesk_news(keywords)
+                real_articles.extend(coindesk_articles)
+                logger.info(f"Scraped {len(coindesk_articles)} articles from CoinDesk")
+            except Exception as e:
+                logger.error(f"Error scraping CoinDesk: {str(e)}")
+            
+            # Scrape CoinTelegraph for real news articles
+            try:
+                cointelegraph_articles = self.scrape_cointelegraph_news(keywords)
+                real_articles.extend(cointelegraph_articles)
+                logger.info(f"Scraped {len(cointelegraph_articles)} articles from CoinTelegraph")
+            except Exception as e:
+                logger.error(f"Error scraping CoinTelegraph: {str(e)}")
+            
+            # If we couldn't scrape any real articles, return empty list instead of fake ones
+            if not real_articles:
+                logger.warning("No real articles could be scraped, returning empty list")
+                return []
+            
+            return real_articles
             
         except Exception as e:
             logger.error(f"Enhanced manual news error: {str(e)}")
+            return []
+    
+    def scrape_coindesk_news(self, keywords, max_articles=3):
+        """Scrape real news articles from CoinDesk"""
+        try:
+            articles = []
+            url = "https://www.coindesk.com/"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Find article links
+                article_links = soup.find_all('a', href=True)
+                article_count = 0
+                
+                for link in article_links:
+                    if article_count >= max_articles:
+                        break
+                        
+                    href = link.get('href')
+                    if href and ('/news/' in href or '/markets/' in href or '/tech/' in href):
+                        # Make sure it's a full URL
+                        if href.startswith('/'):
+                            href = 'https://www.coindesk.com' + href
+                        
+                        # Get article title
+                        title_elem = link.find(['h1', 'h2', 'h3', 'h4', 'span'])
+                        if title_elem:
+                            title = title_elem.get_text(strip=True)
+                            if title and len(title) > 10:  # Valid title
+                                # Analyze sentiment
+                                sentiment = self.analyze_sentiment_enhanced(title)
+                                
+                                articles.append({
+                                    'title': title,
+                                    'description': f"Latest cryptocurrency news from CoinDesk: {title}",
+                                    'content': f"Read the full article at CoinDesk: {title}",
+                                    'url': href,
+                                    'source': 'CoinDesk',
+                                    'published_at': datetime.now().isoformat(),
+                                    'sentiment': sentiment,
+                                    'crawled_at': datetime.now().isoformat()
+                                })
+                                article_count += 1
+            
+            return articles
+            
+        except Exception as e:
+            logger.error(f"Error scraping CoinDesk: {str(e)}")
+            return []
+    
+    def scrape_cointelegraph_news(self, keywords, max_articles=3):
+        """Scrape real news articles from CoinTelegraph"""
+        try:
+            articles = []
+            url = "https://cointelegraph.com/"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Find article links
+                article_links = soup.find_all('a', href=True)
+                article_count = 0
+                
+                for link in article_links:
+                    if article_count >= max_articles:
+                        break
+                        
+                    href = link.get('href')
+                    if href and ('/news/' in href or '/markets/' in href or '/analysis/' in href):
+                        # Make sure it's a full URL
+                        if href.startswith('/'):
+                            href = 'https://cointelegraph.com' + href
+                        
+                        # Get article title
+                        title_elem = link.find(['h1', 'h2', 'h3', 'h4', 'span'])
+                        if title_elem:
+                            title = title_elem.get_text(strip=True)
+                            if title and len(title) > 10:  # Valid title
+                                # Analyze sentiment
+                                sentiment = self.analyze_sentiment_enhanced(title)
+                                
+                                articles.append({
+                                    'title': title,
+                                    'description': f"Latest cryptocurrency news from CoinTelegraph: {title}",
+                                    'content': f"Read the full article at CoinTelegraph: {title}",
+                                    'url': href,
+                                    'source': 'CoinTelegraph',
+                                    'published_at': datetime.now().isoformat(),
+                                    'sentiment': sentiment,
+                                    'crawled_at': datetime.now().isoformat()
+                                })
+                                article_count += 1
+            
+            return articles
+            
+        except Exception as e:
+            logger.error(f"Error scraping CoinTelegraph: {str(e)}")
             return []
     
     def get_trending_headlines(self, force_refresh=False):
@@ -576,36 +675,8 @@ class EnhancedFinancialCrawler:
                 (current_time - self.trending_cache_time) < self.cache_duration):
                 return self.trending_topics
             
-            # Generate trending topics based on current market data
-            trending_topics = {
-                'bitcoin': {
-                    'sentiment': 'positive',
-                    'confidence': 0.75,
-                    'headlines': [
-                        'Bitcoin Institutional Adoption Accelerates',
-                        'BTC Price Shows Strong Support Levels',
-                        'Crypto Market Sentiment Turns Bullish'
-                    ]
-                },
-                'ethereum': {
-                    'sentiment': 'positive',
-                    'confidence': 0.68,
-                    'headlines': [
-                        'Ethereum 2.0 Progress Continues',
-                        'DeFi Growth Drives ETH Demand',
-                        'Smart Contract Innovation Accelerates'
-                    ]
-                },
-                'market_overview': {
-                    'sentiment': 'neutral',
-                    'confidence': 0.45,
-                    'headlines': [
-                        'Global Markets Show Mixed Signals',
-                        'Trading Volume Increases Across Exchanges',
-                        'Regulatory Developments Shape Industry'
-                    ]
-                }
-            }
+            # Get real trending data from news articles
+            trending_topics = self._analyze_trending_from_news()
             
             # Update cache
             self.trending_topics = trending_topics
@@ -616,6 +687,155 @@ class EnhancedFinancialCrawler:
         except Exception as e:
             logger.error(f"Error getting trending headlines: {str(e)}")
             return {}
+    
+    def _analyze_trending_from_news(self):
+        """Analyze news articles to extract real trending topics"""
+        try:
+            # Get recent news articles from SQLite database
+            recent_articles = self.data_warehouse.get_recent_articles(limit=50)
+            logger.info(f"Found {len(recent_articles)} recent articles for trending analysis")
+            
+            # Initialize trending topics
+            trending_topics = {
+                'bitcoin': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': [],
+                    'mentions': 0
+                },
+                'ethereum': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': [],
+                    'mentions': 0
+                },
+                'market_overview': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': [],
+                    'mentions': 0
+                }
+            }
+            
+            # Analyze articles for trending topics
+            bitcoin_mentions = 0
+            ethereum_mentions = 0
+            market_mentions = 0
+            
+            for article in recent_articles:
+                title = article.get('title', '').lower()
+                content = article.get('content', '').lower()
+                sentiment = article.get('sentiment', 'neutral')
+                confidence = article.get('confidence', 0.5)
+                
+                # Check for Bitcoin mentions
+                if any(keyword in title or keyword in content for keyword in ['bitcoin', 'btc', 'btcusdt']):
+                    bitcoin_mentions += 1
+                    trending_topics['bitcoin']['mentions'] += 1
+                    if len(trending_topics['bitcoin']['headlines']) < 3:
+                        trending_topics['bitcoin']['headlines'].append(article.get('title', 'Bitcoin News Update'))
+                    # Update sentiment based on recent articles
+                    if sentiment == 'positive':
+                        trending_topics['bitcoin']['sentiment'] = 'positive'
+                        trending_topics['bitcoin']['confidence'] = max(trending_topics['bitcoin']['confidence'], confidence)
+                    elif sentiment == 'negative':
+                        trending_topics['bitcoin']['sentiment'] = 'negative'
+                        trending_topics['bitcoin']['confidence'] = max(trending_topics['bitcoin']['confidence'], confidence)
+                
+                # Check for Ethereum mentions
+                if any(keyword in title or keyword in content for keyword in ['ethereum', 'eth', 'ethusdt']):
+                    trending_topics['ethereum']['mentions'] += 1
+                    if len(trending_topics['ethereum']['headlines']) < 3:
+                        trending_topics['ethereum']['headlines'].append(article.get('title', 'Ethereum News Update'))
+                    # Update sentiment based on recent articles
+                    if sentiment == 'positive':
+                        trending_topics['ethereum']['sentiment'] = 'positive'
+                        trending_topics['ethereum']['confidence'] = max(trending_topics['ethereum']['confidence'], confidence)
+                    elif sentiment == 'negative':
+                        trending_topics['ethereum']['sentiment'] = 'negative'
+                        trending_topics['ethereum']['confidence'] = max(trending_topics['ethereum']['confidence'], confidence)
+                
+                # Check for general market mentions
+                if any(keyword in title or keyword in content for keyword in ['market', 'crypto', 'trading', 'exchange']):
+                    trending_topics['market_overview']['mentions'] += 1
+                    if len(trending_topics['market_overview']['headlines']) < 3:
+                        trending_topics['market_overview']['headlines'].append(article.get('title', 'Market News Update'))
+                    # Update sentiment based on recent articles
+                    if sentiment == 'positive':
+                        trending_topics['market_overview']['sentiment'] = 'positive'
+                        trending_topics['market_overview']['confidence'] = max(trending_topics['market_overview']['confidence'], confidence)
+                    elif sentiment == 'negative':
+                        trending_topics['market_overview']['sentiment'] = 'negative'
+                        trending_topics['market_overview']['confidence'] = max(trending_topics['market_overview']['confidence'], confidence)
+            
+            # Fill in default headlines if no real data
+            for topic in trending_topics:
+                if not trending_topics[topic]['headlines']:
+                    if topic == 'bitcoin':
+                        trending_topics[topic]['headlines'] = ['Bitcoin Market Analysis', 'BTC Price Movement', 'Crypto Market Update']
+                    elif topic == 'ethereum':
+                        trending_topics[topic]['headlines'] = ['Ethereum Development', 'ETH Trading Activity', 'DeFi Market Trends']
+                    else:
+                        trending_topics[topic]['headlines'] = ['Market Overview', 'Trading Activity', 'Financial News']
+            
+            logger.info(f"Trending analysis results: Bitcoin={bitcoin_mentions}, Ethereum={ethereum_mentions}, Market={market_mentions}")
+            logger.info(f"Final trending topics: {trending_topics}")
+            
+            return trending_topics
+            
+        except Exception as e:
+            logger.error(f"Error analyzing trending from news: {str(e)}")
+            # Return default trending topics
+            return {
+                'bitcoin': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': ['Bitcoin Market Analysis', 'BTC Price Movement', 'Crypto Market Update'],
+                    'mentions': 0
+                },
+                'ethereum': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': ['Ethereum Development', 'ETH Trading Activity', 'DeFi Market Trends'],
+                    'mentions': 0
+                },
+                'market_overview': {
+                    'sentiment': 'neutral',
+                    'confidence': 0.5,
+                    'headlines': ['Market Overview', 'Trading Activity', 'Financial News'],
+                    'mentions': 0
+                }
+            }
+    
+    def _get_recent_news_articles(self, limit=50):
+        """Get recent news articles from database (not CSV)"""
+        try:
+            # Use the database instead of CSV files
+            logger.info("Getting recent articles from database")
+            articles = self.data_warehouse.get_recent_articles(limit)
+            
+            # Convert database format to expected format
+            formatted_articles = []
+            for article in articles:
+                formatted_article = {
+                    'title': article.get('title', ''),
+                    'content': article.get('title', ''),  # Use title as content for now
+                    'sentiment': article.get('sentiment', 'neutral'),
+                    'confidence': article.get('confidence', 0.5),
+                    'source': article.get('source', ''),
+                    'url': article.get('url', ''),
+                    'published_at': article.get('published_at', ''),
+                    'keywords': article.get('keywords', ''),
+                    'score': article.get('score', 0.0)
+                }
+                formatted_articles.append(formatted_article)
+            
+            logger.info(f"Retrieved {len(formatted_articles)} articles from database")
+            return formatted_articles
+            
+        except Exception as e:
+            logger.error(f"Error getting recent news articles from database: {str(e)}")
+            return []
     
     def export_to_excel_enhanced(self, data, filename=None):
         """Enhanced Excel export with better formatting (simplified without pandas)"""

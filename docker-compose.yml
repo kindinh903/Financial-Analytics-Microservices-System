@@ -80,14 +80,15 @@ services:
       - INFLUX_ORG=Financial-Analytics
       - INFLUX_BUCKET=PriceServiceDB
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - KAFKA_ENABLED=false
+      - KAFKA_ENABLED=true
     depends_on:
       kafka:
         condition: service_healthy
       redis:
-        condition: service_healthy
+        condition: service_started
       influxdb:
-        condition: service_healthy
+        condition: service_started
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 10s
@@ -188,6 +189,7 @@ services:
       - auth-service
       - price-service
       - user-service
+      - crawler
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
@@ -275,8 +277,16 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      # # Prevent Cluster ID mismatch by using a fixed cluster ID
+      # KAFKA_CLUSTER_ID: "financial-analytics-cluster-2025"
+      # # Additional settings to prevent startup issues
+      # KAFKA_LOG_RETENTION_HOURS: 24
+      # KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      # KAFKA_LOG_CLEANUP_POLICY: delete
     volumes:
       - kafka-data:/var/lib/kafka/data
+    #   - ./kafka-startup.sh:/kafka-startup.sh:ro
+    # command: ["/bin/bash", "/kafka-startup.sh"]
 
   influxdb:
     image: influxdb:2.7

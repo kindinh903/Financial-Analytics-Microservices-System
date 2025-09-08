@@ -286,7 +286,7 @@ class SimpleDataWarehouse:
     
     def export_to_csv(self, symbol: str = 'BTCUSDT') -> str:
         """
-        Export data to CSV format (simple implementation)
+        Export data to CSV format with deduplication
         
         Args:
             symbol: Trading symbol
@@ -300,19 +300,108 @@ class SimpleDataWarehouse:
         filename = f"sentiment_analysis_{symbol}_{timestamp}.csv"
         csv_path = self.data_dir / "csv" / filename
         
+        # Check if CSV file already exists and read existing URLs
+        existing_urls = set()
+        if csv_path.exists():
+            try:
+                with open(csv_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    for line in lines[1:]:  # Skip header
+                        parts = line.strip().split(',')
+                        if len(parts) >= 4:
+                            existing_urls.add(parts[3])  # URL is in 4th column
+            except Exception as e:
+                logger.warning(f"Could not read existing CSV file: {e}")
+        
         # Create CSV content
         csv_content = "ID,Title,Source,URL,Published At,Sentiment,Score,Confidence,Keywords,Analyzed At\n"
         
+        # Only add articles that don't already exist in CSV
+        new_articles_count = 0
         for article in articles:
-            keywords_str = ', '.join(article['keywords'])
-            csv_content += f"{article['id']},{article['title']},{article['source']},{article['url']},{article['published_at']},{article['sentiment_label']},{article['sentiment_score']},{article['confidence']},\"{keywords_str}\",{article['analyzed_at']}\n"
+            if article['url'] not in existing_urls:
+                keywords_str = ', '.join(article['keywords']) if isinstance(article['keywords'], list) else str(article['keywords'])
+                csv_content += f"{article['id']},{article['title']},{article['source']},{article['url']},{article['published_at']},{article['sentiment_label']},{article['sentiment_score']},{article['confidence']},\"{keywords_str}\",{article['analyzed_at']}\n"
+                existing_urls.add(article['url'])  # Add to set to avoid duplicates in same export
+                new_articles_count += 1
         
         # Write to file
         with open(csv_path, 'w', encoding='utf-8') as f:
             f.write(csv_content)
         
-        logger.info(f"Exported data to {csv_path}")
+        logger.info(f"Exported {new_articles_count} new articles to {csv_path}")
         return str(csv_path)
+    
+    def article_exists_by_url(self, url):
+        """Check if an article with the given URL already exists"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM news_articles WHERE url = ?", (url,))
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            return count > 0
+            
+        except Exception as e:
+            logger.error(f"Error checking article existence: {str(e)}")
+            return False
+    
+    def get_recent_articles(self, limit=50):
+        """Get recent articles from the database"""
+        try:
+            logger.info(f"Getting recent articles from database: {self.db_path}")
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # First, let's check what tables exist
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            logger.info(f"Available tables: {[table[0] for table in tables]}")
+            
+            # Check if articles table has any data
+            cursor.execute("SELECT COUNT(*) FROM news_articles")
+            article_count = cursor.fetchone()[0]
+            logger.info(f"Total articles in database: {article_count}")
+            
+            # Get recent articles with sentiment analysis
+            query = """
+            SELECT a.id, a.title, a.source, a.url, a.published_at, 
+                   s.sentiment_label, s.sentiment_score, s.confidence, s.keywords, s.created_at
+            FROM news_articles a
+            LEFT JOIN sentiment_analysis s ON a.id = s.article_id
+            ORDER BY a.published_at DESC
+            LIMIT ?
+            """
+            
+            cursor.execute(query, (limit,))
+            rows = cursor.fetchall()
+            logger.info(f"Query returned {len(rows)} rows")
+            
+            articles = []
+            for row in rows:
+                article = {
+                    'id': row[0],
+                    'title': row[1],
+                    'source': row[2],
+                    'url': row[3],
+                    'published_at': row[4],
+                    'sentiment': row[5] if row[5] else 'neutral',
+                    'score': row[6] if row[6] else 0.0,
+                    'confidence': row[7] if row[7] else 0.5,
+                    'keywords': row[8] if row[8] else '',
+                    'analyzed_at': row[9] if row[9] else None
+                }
+                articles.append(article)
+            
+            conn.close()
+            logger.info(f"Returning {len(articles)} articles")
+            return articles
+            
+        except Exception as e:
+            logger.error(f"Error getting recent articles: {str(e)}")
+            return []
 
 # Example usage and testing
 if __name__ == "__main__":

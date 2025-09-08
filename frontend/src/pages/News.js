@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { newsService } from '../services/api';
+import { newsService, crawlerService } from '../services/api';
 
 const News = () => {
   const [news, setNews] = useState([]);
@@ -7,83 +7,204 @@ const News = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [trendingHeadlines, setTrendingHeadlines] = useState({});
   const [warehouseStats, setWarehouseStats] = useState(null);
 
-  // Enhanced crawler API base URL
-  // Use host.docker.internal for Docker containers, localhost for direct access
-  const ENHANCED_API_BASE = process.env.NODE_ENV === 'production' 
-    ? 'http://host.docker.internal:8001' 
-    : 'http://localhost:8001';
+  const retryFetch = () => {
+    setRetryCount(prev => prev + 1);
+    setError(null);
+    setLoading(true);
+  };
 
-  useEffect(() => {
-    const fetchEnhancedNews = async () => {
+  const fetchEnhancedNews = async () => {
       try {
         setLoading(true);
-        console.log(`🔗 Using API base URL: ${ENHANCED_API_BASE}`);
+        console.log('🔗 Using gateway-based crawler service');
         
         // Fetch trending headlines first
-        const trendingResponse = await fetch(`${ENHANCED_API_BASE}/trending`);
-        if (trendingResponse.ok) {
-          const trendingData = await trendingResponse.json();
-          setTrendingHeadlines(trendingData.trending_headlines || {});
+        try {
+          const trendingData = await crawlerService.getTrending();
+          console.log('Raw trending data:', trendingData); // Debug log
+          console.log('Trending headlines:', trendingData.data.trending_headlines); // Debug log
+          setTrendingHeadlines(trendingData.data.trending_headlines || {});
+        } catch (error) {
+          console.warn('Could not fetch trending headlines:', error);
         }
 
-        // Fetch latest news from enhanced crawler
-        const newsResponse = await fetch(`${ENHANCED_API_BASE}/news/enhanced?symbol=BTCUSDT&limit=20`);
-        if (newsResponse.ok) {
-          const newsData = await newsResponse.json();
+        // Fetch stored news from data warehouse (no crawling)
+        try {
+          const newsData = await crawlerService.getStoredNews('BTCUSDT', 50);
           console.log('Raw news data:', newsData); // Debug log
+          console.log('News data structure:', {
+            hasData: !!newsData.data,
+            hasNewsData: !!newsData.data?.news_data,
+            hasArticles: !!newsData.data?.news_data?.articles,
+            articlesLength: newsData.data?.news_data?.articles?.length || 0
+          });
           
           // Handle different possible data structures
           let newsArray = [];
-          if (Array.isArray(newsData.news_data)) {
-            newsArray = newsData.news_data;
+          if (newsData.data.news_data && Array.isArray(newsData.data.news_data.articles)) {
+            // Handle the actual API response structure
+            newsArray = newsData.data.news_data.articles;
+            console.log('✅ Using news_data.articles structure, found', newsArray.length, 'articles');
+          } else if (Array.isArray(newsData.data.news_data)) {
+            newsArray = newsData.data.news_data;
+            console.log('✅ Using news_data array structure, found', newsArray.length, 'articles');
+          } else if (Array.isArray(newsData.data.data)) {
+            newsArray = newsData.data.data;
+            console.log('✅ Using data array structure, found', newsArray.length, 'articles');
           } else if (Array.isArray(newsData.data)) {
             newsArray = newsData.data;
-          } else if (Array.isArray(newsData)) {
-            newsArray = newsData;
-          } else if (newsData.news_data && Array.isArray(newsData.news_data.articles)) {
-            // Handle the actual API response structure
-            newsArray = newsData.news_data.articles;
+            console.log('✅ Using root data array structure, found', newsArray.length, 'articles');
           } else {
-            console.warn('Unexpected news data structure:', newsData);
+            console.warn('❌ Unexpected news data structure:', newsData);
             newsArray = [];
           }
           
           // Transform enhanced news data to match existing UI structure
           const transformedNews = newsArray.map((item, index) => {
-            console.log(`Article ${index + 1} sentiment:`, item.sentiment, typeof item.sentiment);
+            console.log(`Article ${index + 1} raw data:`, {
+              title: item.title,
+              sentiment: item.sentiment,
+              sentimentType: typeof item.sentiment,
+              publishedAt: item.published_at,
+              confidence: item.confidence
+            });
+            
+            // Smart category detection based on title and content
+            const articleTitle = (item.title || item.headline || item.name || '').toLowerCase();
+            const content = (item.description || item.summary || item.content || '').toLowerCase();
+            const text = `${articleTitle} ${content}`;
+            
+            let category = 'cryptocurrency'; // default
+            
+            if (text.includes('bitcoin') || text.includes('btc')) {
+              category = 'bitcoin';
+            } else if (text.includes('ethereum') || text.includes('eth')) {
+              category = 'ethereum';
+            } else if (text.includes('defi') || text.includes('decentralized finance')) {
+              category = 'defi';
+            } else if (text.includes('nft') || text.includes('non-fungible')) {
+              category = 'nft';
+            } else if (text.includes('blockchain')) {
+              category = 'blockchain';
+            } else if (text.includes('trading') || text.includes('exchange')) {
+              category = 'trading';
+            } else if (text.includes('regulation') || text.includes('regulatory')) {
+              category = 'regulation';
+            } else if (text.includes('technology') || text.includes('tech')) {
+              category = 'technology';
+            } else if (text.includes('market') || text.includes('analysis')) {
+              category = 'market-analysis';
+            }
+            
+            // Clean and validate the data
+            const title = item.title || item.headline || item.name || 'Financial News Update';
+            const summary = item.description || item.summary || item.content || title; // Use title as fallback
+            const source = item.source || item.domain || 'Financial Source';
+            const publishedAt = item.published_at || item.timestamp || item.date || new Date().toISOString();
+            const url = item.url || item.link || item.source_url || '#';
+            
+            // Validate sentiment field
+            let sentiment = 'neutral';
+            if (item.sentiment && typeof item.sentiment === 'string') {
+                // Check if sentiment is a valid value
+                if (['positive', 'negative', 'neutral'].includes(item.sentiment.toLowerCase())) {
+                    sentiment = item.sentiment.toLowerCase();
+                } else {
+                    // If sentiment is not valid (like a timestamp), determine from score
+                    const score = parseFloat(item.score) || 0;
+                    if (score > 0.1) {
+                        sentiment = 'positive';
+                    } else if (score < -0.1) {
+                        sentiment = 'negative';
+                    } else {
+                        sentiment = 'neutral';
+                    }
+                    console.warn(`Invalid sentiment "${item.sentiment}" for article "${title}", using score-based sentiment: ${sentiment}`);
+                }
+            }
+            
+            const confidence = (typeof item.confidence === 'number' && item.confidence > 0) ? item.confidence : 0.5;
+            
             return {
               id: index + 1,
-              title: item.title || item.headline || item.name || 'Financial News Update',
-              summary: item.summary || item.content || item.description || 'Market analysis and financial insights',
-              category: item.category || item.type || 'crypto',
-              source: item.source || item.domain || item.url || 'Financial Source',
-              publishedAt: item.published_at || item.timestamp || item.date || new Date().toISOString(),
+              title: title,
+              summary: summary,
+              category: category,
+              source: source,
+              publishedAt: publishedAt,
               image: item.image || `https://picsum.photos/300/200?random=${index}`,
-              url: item.url || item.link || item.source_url || '#',
-              sentiment: (item.sentiment && typeof item.sentiment === 'string') ? item.sentiment : 'neutral',
-              confidence: (typeof item.confidence === 'number') ? item.confidence : 0.5,
+              url: url,
+              sentiment: sentiment,
+              confidence: confidence,
               keywords: Array.isArray(item.keywords) ? item.keywords : (Array.isArray(item.tags) ? item.tags : [])
             };
           });
           
-          setNews(transformedNews);
+          // Filter out obviously bad data
+          const validNews = transformedNews.filter(article => {
+            // Filter out articles with unrealistic titles
+            const title = article.title.toLowerCase();
+            const url = article.url.toLowerCase();
+            
+            const badPatterns = [
+              'bitcoin reaches new all-time high of $100',
+              'bitcoin reaches new all-time high of $100,000',
+              'bitcoin surges past $50',
+              'test article',
+              'placeholder',
+              'sample data',
+              'example.com',
+              'mock data',
+              'fake news'
+            ];
+            
+            const hasBadPattern = badPatterns.some(pattern => 
+              title.includes(pattern) || url.includes(pattern)
+            );
+            
+            // Additional validation
+            const hasValidUrl = article.url && !article.url.includes('example.com');
+            const hasValidTitle = article.title.length > 10;
+            const hasValidDate = article.publishedAt && !article.publishedAt.includes('example.com');
+            
+            return !hasBadPattern && hasValidTitle && hasValidUrl && hasValidDate;
+          });
+          
+          setNews(validNews);
           setError(null);
           
+          // Debug: Show category distribution
+          const categoryCount = transformedNews.reduce((acc, item) => {
+            acc[item.category] = (acc[item.category] || 0) + 1;
+            return acc;
+          }, {});
+          console.log('📊 Category distribution:', categoryCount);
+          
           // Show storage confirmation if available
-          if (newsData.stored_count !== undefined) {
-            console.log(`✅ Stored ${newsData.stored_count} articles in data warehouse`);
+          if (newsData.data.stored_count !== undefined) {
+            console.log(`✅ Stored ${newsData.data.stored_count} articles in data warehouse`);
           }
-        } else {
-          throw new Error(`Failed to fetch enhanced news: ${newsResponse.status}`);
+        } catch (newsError) {
+          console.warn('Failed to fetch enhanced news:', newsError);
+          
+          // Handle different types of errors
+          if (newsError.code === 'ECONNABORTED') {
+            setError('Request timed out. The crawler is processing data, please wait and try again.');
+          } else if (newsError.response?.status === 404) {
+            setError('Crawler service not available. Please check if the service is running.');
+          } else {
+            setError('Failed to load enhanced news. Please try again later.');
+          }
+          setNews([]);
         }
       } catch (err) {
         console.error('Error fetching enhanced news:', err);
-        setError('Failed to load enhanced news. Using fallback data.');
-        // Fallback to enhanced mock data with better structure
-        setNews(generateEnhancedMockNews());
+        setError('Failed to load enhanced news. Please try again later.');
+        setNews([]);
       } finally {
         setLoading(false);
       }
@@ -92,85 +213,85 @@ const News = () => {
     const fetchCategories = async () => {
       try {
         const response = await newsService.getNewsCategories();
-        setCategories(response.data || []);
+        console.log('Categories response:', response.data);
+        
+        // Handle different response structures
+        let categoriesArray = [];
+        if (Array.isArray(response.data)) {
+          categoriesArray = response.data;
+        } else if (response.data && Array.isArray(response.data.categories)) {
+          categoriesArray = response.data.categories;
+        } else {
+          console.warn('Unexpected categories structure:', response.data);
+          categoriesArray = ['all', 'crypto', 'stocks', 'forex', 'commodities', 'economy', 'sentiment'];
+        }
+        
+        setCategories(categoriesArray);
       } catch (err) {
-        console.warn('Using enhanced categories:', err);
+        console.warn('Using fallback categories:', err);
         setCategories(['all', 'crypto', 'stocks', 'forex', 'commodities', 'economy', 'sentiment']);
       }
     };
 
     const fetchWarehouseStats = async () => {
       try {
-        const response = await fetch(`${ENHANCED_API_BASE}/data/warehouse/stats`);
-        if (response.ok) {
-          const stats = await response.json();
-          setWarehouseStats(stats.data);
-        }
+        const stats = await crawlerService.getWarehouseStats();
+        setWarehouseStats(stats.data.data);
       } catch (err) {
         console.warn('Could not fetch warehouse stats:', err);
       }
     };
 
+  useEffect(() => {
     fetchEnhancedNews();
     fetchCategories();
     fetchWarehouseStats();
-  }, []);
+  }, [retryCount]);
 
-  const generateEnhancedMockNews = () => [
-    {
-      id: 1,
-      title: 'Bitcoin Surges Past $50,000 as Institutional Adoption Grows',
-      summary: 'Bitcoin has reached a new milestone, crossing the $50,000 mark for the first time since December 2021, driven by increased institutional adoption and positive market sentiment.',
-      category: 'crypto',
-      source: 'Reddit r/CryptoCurrency',
-      publishedAt: new Date().toISOString(),
-      image: 'https://picsum.photos/300/200?random=1',
-      url: 'https://reddit.com/r/CryptoCurrency',
-      sentiment: 'positive',
-      confidence: 0.85,
-      keywords: ['bitcoin', 'institutional', 'adoption']
-    },
-    {
-      id: 2,
-      title: 'Federal Reserve Signals Potential Rate Cuts in 2024',
-      summary: 'The Federal Reserve has indicated a more dovish stance, suggesting potential interest rate cuts in 2024 as inflation continues to moderate.',
-      category: 'economy',
-      source: 'Financial Times Forum',
-      publishedAt: new Date(Date.now() - 3600000).toISOString(),
-      image: 'https://picsum.photos/300/200?random=2',
-      url: 'https://ft.com/forums',
-      sentiment: 'neutral',
-      confidence: 0.72,
-      keywords: ['federal reserve', 'interest rates', 'inflation']
-    },
-    {
-      id: 3,
-      title: 'Tech Stocks Rally on Strong Earnings Reports',
-      summary: 'Major technology companies have reported strong quarterly earnings, leading to a broad rally in tech stocks and pushing major indices to new highs.',
-      category: 'stocks',
-      source: 'MarketWatch Community',
-      publishedAt: new Date(Date.now() - 7200000).toISOString(),
-      image: 'https://picsum.photos/300/200?random=3',
-      url: 'https://marketwatch.com/community',
-      sentiment: 'positive',
-      confidence: 0.91,
-      keywords: ['tech stocks', 'earnings', 'rally']
-    }
-  ];
 
   const filteredNews = selectedCategory === 'all' 
     ? news 
-    : news.filter(item => item.category === selectedCategory);
+    : news.filter(item => {
+        // Case-insensitive category matching
+        const matches = item.category && item.category.toLowerCase() === selectedCategory.toLowerCase();
+        if (selectedCategory !== 'all') {
+          console.log(`Filtering: "${item.category}" vs "${selectedCategory}" = ${matches}`);
+        }
+        return matches;
+      });
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      if (!dateString) return 'No date';
+      
+      // Handle different date formats
+      let date;
+      if (dateString.includes('T') && dateString.includes('Z')) {
+        // ISO format: 2025-09-02T08:25:59Z
+        date = new Date(dateString);
+      } else if (dateString.includes(' ')) {
+        // Format: 2025-09-03 09:43:58
+        date = new Date(dateString.replace(' ', 'T'));
+      } else {
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.warn('Date formatting error:', error, 'for date:', dateString);
+      return 'Invalid date';
+    }
   };
 
   const getSentimentColor = (sentiment) => {
@@ -234,7 +355,7 @@ const News = () => {
               <div key={topic} className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-blue-800">{topic}</span>
-                  <span className="text-xs text-blue-600">{data.count || 0} mentions</span>
+                  <span className="text-xs text-blue-600">{data.mentions || 0} mentions</span>
                 </div>
                 <p className="text-sm text-gray-700">{data.description || 'Market trending topic'}</p>
               </div>
@@ -340,14 +461,11 @@ const News = () => {
             onClick={async () => {
               setLoading(true);
               try {
-                const response = await fetch(`${ENHANCED_API_BASE}/news/enhanced?symbol=BTCUSDT&limit=20&force_refresh=true`);
-                if (response.ok) {
-                  const data = await response.json();
-                  if (data.stored_count !== undefined) {
-                    alert(`✅ Refreshed and stored ${data.stored_count} new articles in data warehouse!`);
-                  }
-                  fetchEnhancedNews(); // Refresh the display
+                const data = await crawlerService.getEnhancedNews('BTCUSDT', 20);
+                if (data.data.stored_count !== undefined) {
+                  alert(`✅ Refreshed and stored ${data.data.stored_count} new articles in data warehouse!`);
                 }
+                fetchEnhancedNews(); // Refresh the display
               } catch (error) {
                 console.error('Error refreshing news:', error);
               } finally {
@@ -374,9 +492,15 @@ const News = () => {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex">
             <div className="text-yellow-400">⚠️</div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm font-medium text-yellow-800">Warning</p>
               <div className="mt-2 text-sm text-yellow-700">{error}</div>
+              <button
+                onClick={retryFetch}
+                className="mt-3 px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+              >
+                Retry ({retryCount > 0 ? `Attempt ${retryCount + 1}` : 'Try Again'})
+              </button>
             </div>
           </div>
         </div>

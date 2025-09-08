@@ -1,12 +1,14 @@
 fastapi
 uvicorn
+kafka-python
+redis
 pandas
 requests
 pydantic
+pydantic-settings
 scikit-learn
 joblib
 python-dotenv
 numpy
 lightgbm
-xgboost
-pandas
+xgboosting
