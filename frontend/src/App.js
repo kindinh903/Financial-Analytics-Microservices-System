@@ -22,7 +22,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} /> {/* Thêm dòng này */}
+        <Route path="/profile" element={<Layout><Profile /></Layout>} />
         <Route path="/admin" element={<Layout><AdminPanel /></Layout>} />
         <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
         <Route path="/charts" element={<Layout><Charts /></Layout>} />
