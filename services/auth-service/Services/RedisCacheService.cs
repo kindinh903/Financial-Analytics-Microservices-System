@@ -22,6 +22,7 @@ namespace AuthService.Services
 
         public async Task<T?> GetAsync<T>(string key)
         {
+            Console.WriteLine($"[Redis] Getting key: {key}");
             var value = await _db.StringGetAsync(key);
             if (value.IsNullOrEmpty) return default;
             return JsonSerializer.Deserialize<T>(value!);
@@ -29,12 +30,14 @@ namespace AuthService.Services
 
         public async Task SetAsync<T>(string key, T value, int expireSeconds = 60)
         {
+            Console.WriteLine($"[Redis] Setting key: {key} with expiration: {expireSeconds} seconds");
             var json = JsonSerializer.Serialize(value);
             await _db.StringSetAsync(key, json, TimeSpan.FromSeconds(expireSeconds));
         }
 
         public async Task RemoveAsync(string key)
         {
+            Console.WriteLine($"[Redis] Removing key: {key}");
             await _db.KeyDeleteAsync(key);
         }
     }

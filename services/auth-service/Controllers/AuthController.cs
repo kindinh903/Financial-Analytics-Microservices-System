@@ -78,13 +78,14 @@ public class AuthController : ControllerBase
         var userPermissions = await _redisCacheService.GetAsync<UserPermissionsDto>(userId);
         if (userPermissions == null)
         {
-            Console.WriteLine("User permissions not found in Redis cache, UserService: ", userPermissions);
+            Console.WriteLine("User permissions not found in Redis cache, userPermissions: ", userPermissions);
             userPermissions = await _userServiceClient.GetUserPermissionsAsync(
                 userId,
                 response.User.Email,
                 response.User.FirstName,
                 response.User.LastName
             );
+            Console.WriteLine("Fetched user permissions from user service: ", userPermissions);
             if (userPermissions != null)
                 await _redisCacheService.SetAsync(userId, userPermissions);
             else
@@ -110,7 +111,7 @@ public class AuthController : ControllerBase
             Email = response.User.Email,
             FirstName = response.User.FirstName,
             LastName = response.User.LastName,
-            Role = response.User.Role,
+            Role = userPermissions?.Role ?? "user",
             IsEmailVerified = response.User.IsEmailVerified
         };
         var enrichedAccessToken = _jwtService.GenerateAccessToken(appUser, claims);
