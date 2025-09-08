@@ -15,14 +15,14 @@ builder.Services.AddDbContext<BacktestDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add Mock Services for testing (comment out for production)
-builder.Services.AddScoped<IAiService, MockAiService>();
+// builder.Services.AddScoped<IAiService, MockAiService>();
 // builder.Services.AddScoped<IPriceService, MockPriceService>();
 
 // Add HttpClient for external services (uncomment for production)
-// builder.Services.AddHttpClient<IAiService, AiService>(client =>
-// {
-//     client.BaseAddress = new Uri(builder.Configuration["Services:AiService:BaseUrl"] ?? "http://ai-service:8084");
-// });
+builder.Services.AddHttpClient<IAiService, AiService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:AiService:BaseUrl"] ?? "http://localhost:8084");
+});
 
 builder.Services.AddHttpClient<IPriceService, PriceService>(client =>
 {

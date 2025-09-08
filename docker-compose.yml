@@ -116,14 +116,16 @@ services:
     build: ./services/backtest-service
     container_name: backtest-service
     expose: ["8080"]
+    ports:
+      - "5071:8080"
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=BacktestDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
-      - Services__AiService__BaseUrl=http://ai-service:8084
+      - Services__AiService__BaseUrl=http://ai-predict-service:8084
       - Services__PriceService__BaseUrl=http://price-service:8081
     depends_on:
       - sqlserver
-      # - ai-predict-service
+      - ai-predict-service
       - price-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
