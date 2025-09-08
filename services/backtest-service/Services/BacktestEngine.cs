@@ -44,6 +44,7 @@ namespace BacktestService.Services
             var result = new BacktestResult
             {
                 Id = Guid.NewGuid(),
+                UserId = request.UserId,
                 Symbol = request.Symbol,
                 Interval = request.Interval,
                 StartDate = request.StartDate,
@@ -198,9 +199,20 @@ namespace BacktestService.Services
                 .FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        public async Task<List<BacktestResult>> GetBacktestResultsAsync(string? symbol = null, string? interval = null, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<BacktestResult?> GetBacktestResultAsync(Guid id, string userId)
+        {
+            return await _context.BacktestResults
+                .Include(b => b.Trades)
+                .Include(b => b.PerformanceHistory)
+                .FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
+        }
+
+        public async Task<List<BacktestResult>> GetBacktestResultsAsync(string? symbol = null, string? interval = null, DateTime? startDate = null, DateTime? endDate = null, string? userId = null)
         {
             var query = _context.BacktestResults.AsQueryable();
+
+            if (!string.IsNullOrEmpty(userId))
+                query = query.Where(b => b.UserId == userId);
 
             if (!string.IsNullOrEmpty(symbol))
                 query = query.Where(b => b.Symbol == symbol);

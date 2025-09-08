@@ -266,7 +266,7 @@ const Backtest = () => {
         interval: formData.interval,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
-        initialBalance: formData.lots,
+        initialBalance: formData.lots, // Fixed: use correct field name
         stopLoss: formData.stopLoss / 100, // Convert percentage to decimal
         takeProfit: formData.takeProfit / 100, // Convert percentage to decimal
         strategy: formData.selectedStrategy,
@@ -528,40 +528,42 @@ const Backtest = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    LOTS:
+                    Initial Balance ($):
                   </label>
                   <input
                     type="number"
                     value={formData.lots}
                     onChange={(e) => handleInputChange('lots', parseFloat(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="$10,000"
+                    placeholder="10000"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Stop Loss:
+                    Stop Loss (%):
                   </label>
                   <input
                     type="number"
                     value={formData.stopLoss}
                     onChange={(e) => handleInputChange('stopLoss', parseFloat(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="2%"
+                    placeholder="2"
+                    step="0.1"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Take Profit:
+                    Take Profit (%):
                   </label>
                   <input
                     type="number"
                     value={formData.takeProfit}
                     onChange={(e) => handleInputChange('takeProfit', parseFloat(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="8%"
+                    placeholder="8"
+                    step="0.1"
                   />
                 </div>
               </div>

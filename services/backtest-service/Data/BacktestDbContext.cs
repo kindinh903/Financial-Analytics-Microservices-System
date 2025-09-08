@@ -21,6 +21,7 @@ namespace BacktestService.Data
             modelBuilder.Entity<BacktestResult>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
                 entity.Property(e => e.Symbol).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Interval).IsRequired().HasMaxLength(10);
                 entity.Property(e => e.InitialBalance).HasColumnType("decimal(18,8)");
@@ -46,7 +47,7 @@ namespace BacktestService.Data
                 entity.Property(e => e.Quantity).HasColumnType("decimal(18,8)");
                 entity.Property(e => e.Commission).HasColumnType("decimal(18,8)");
                 entity.Property(e => e.PnL).HasColumnType("decimal(18,8)");
-                entity.Property(e => e.Reason).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Reason).IsRequired().HasMaxLength(200);
                 entity.HasOne<BacktestResult>()
                     .WithMany(b => b.Trades)
                     .HasForeignKey(t => t.BacktestResultId)

@@ -16,7 +16,7 @@ namespace BacktestService.Services
     {
         Task<BacktestResult> RunBacktestAsync(BacktestRequest request);
         Task<BacktestResult?> GetBacktestResultAsync(Guid id);
-        Task<List<BacktestResult>> GetBacktestResultsAsync(string? symbol = null, string? interval = null, DateTime? startDate = null, DateTime? endDate = null);
+        Task<List<BacktestResult>> GetBacktestResultsAsync(string? symbol = null, string? interval = null, DateTime? startDate = null, DateTime? endDate = null, string? userId = null);
         Task DeleteBacktestResultAsync(Guid id);
     }
 

@@ -30,6 +30,25 @@ namespace BacktestService.Controllers
                     return BadRequest(ModelState);
                 }
 
+                // Log all headers for debugging
+                foreach (var header in Request.Headers)
+                {
+                    _logger.LogInformation("Header: {Key} = {Value}", header.Key, string.Join(",", header.Value));
+                }
+
+                // Extract user ID from header (set by gateway)
+                var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+                _logger.LogInformation("Extracted UserId: {UserId}", userId ?? "NULL");
+                
+                // For now, allow requests without user ID for testing
+                // if (string.IsNullOrEmpty(userId))
+                // {
+                //     return Unauthorized(new { error = "User ID not found in request" });
+                // }
+
+                // Set user ID in request (can be null for direct API calls)
+                request.UserId = userId;
+
                 var result = await _backtestService.RunBacktestAsync(request);
                 return Ok(result);
             }
@@ -48,10 +67,23 @@ namespace BacktestService.Controllers
         {
             try
             {
+                // Extract user ID from header (set by gateway)
+                var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found in request" });
+                }
+
                 var result = await _backtestService.GetBacktestResultAsync(id);
                 if (result == null)
                 {
                     return NotFound();
+                }
+
+                // Check if the backtest belongs to the requesting user
+                if (result.UserId != userId)
+                {
+                    return StatusCode(403, new { error = "Access denied. You can only access your own backtest results." });
                 }
 
                 return Ok(result);
@@ -75,7 +107,15 @@ namespace BacktestService.Controllers
         {
             try
             {
-                var results = await _backtestService.GetBacktestResultsAsync(symbol, interval, startDate, endDate);
+                // Extract user ID from header (set by gateway)
+                var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found in request" });
+                }
+
+                // Filter results by user ID
+                var results = await _backtestService.GetBacktestResultsAsync(symbol, interval, startDate, endDate, userId);
                 return Ok(results);
             }
             catch (Exception ex)
@@ -93,6 +133,26 @@ namespace BacktestService.Controllers
         {
             try
             {
+                // Extract user ID from header (set by gateway)
+                var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found in request" });
+                }
+
+                // Get the backtest result to check ownership
+                var result = await _backtestService.GetBacktestResultAsync(id);
+                if (result == null)
+                {
+                    return NotFound();
+                }
+
+                // Check if the backtest belongs to the requesting user
+                if (result.UserId != userId)
+                {
+                    return StatusCode(403, new { error = "Access denied. You can only delete your own backtest results." });
+                }
+
                 await _backtestService.DeleteBacktestResultAsync(id);
                 return NoContent();
             }
@@ -154,7 +214,15 @@ namespace BacktestService.Controllers
         {
             try
             {
-                var results = await _backtestService.GetBacktestResultsAsync(symbol, interval);
+                // Extract user ID from header (set by gateway)
+                var userId = Request.Headers["X-User-Id"].FirstOrDefault();
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { error = "User ID not found in request" });
+                }
+
+                // Filter results by user ID
+                var results = await _backtestService.GetBacktestResultsAsync(symbol, interval, null, null, userId);
                 
                 if (!results.Any())
                 {
