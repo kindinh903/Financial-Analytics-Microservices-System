@@ -5,7 +5,7 @@ class WebSocketService {
     this.reconnectAttempts = new Map();
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 3000;
-    this.baseURL = process.env.REACT_APP_WS_URL || 'ws://localhost:8001';
+    this.baseURL = process.env.REACT_APP_WS_URL || 'ws://localhost:8080';
   }
 
   // Connect to price stream for a specific symbol

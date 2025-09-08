@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import Header from '../components/Layout/Header';
 import MultiChartDashboard from '../components/Charts/MultiChartDashboard';
+import { predictService, priceService } from '../services/api';
+
+
+
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const [predictionResult, setPredictionResult] = useState(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [predictionError, setPredictionError] = useState(null);
 
   const handleProfileClick = () => {
     const accessToken = localStorage.getItem('accessToken');
@@ -17,38 +24,57 @@ const HomePage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header - Section 1 */}
-      <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="text-red-600 font-bold text-lg">📊 Trading Platform</div>
-          <nav className="flex gap-6 text-sm">
-            <Link to="/" className="text-blue-600 hover:text-blue-800 font-medium">Giao dịch</Link>
-            <Link to="/dashboard" className="text-gray-600 hover:text-gray-800">Trang chủ</Link>
-            <Link to="/charts" className="text-gray-600 hover:text-gray-800">Biểu đồ</Link>
-            <Link to="/portfolio" className="text-gray-600 hover:text-gray-800">Danh mục</Link>
-            <Link to="/news" className="text-gray-600 hover:text-gray-800">Tin tức</Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xl cursor-pointer hover:scale-110 transition-transform">🔔</span>
-          <span className="text-xl cursor-pointer hover:scale-110 transition-transform">⚙️</span>
-          <span
-            className="text-xl cursor-pointer hover:scale-110 transition-transform"
-            title="Profile"
-            onClick={handleProfileClick}
-          >
-            👤
-          </span>
-        </div>
-      </div>
+  const handlePredictNextCandle = async (chartConfig) => {
+    const { symbol, timeframe } = chartConfig;
+    setLoadingPrediction(true);
+    setPredictionError(null);
 
-      <div className="flex" style={{ height: 'calc(100vh - 60px)' }}>
+    try {
+      // 1️⃣ Lấy30 nến gần nhất
+      const candlesRes = await priceService.getCandles({
+        symbol,
+        interval: timeframe,
+        limit: 30,
+      });
+
+      const candles = candlesRes.data || [];
+      console.log(candles)
+      console.log(candles.data)
+
+
+      if (candles.length === 0) {
+        throw new Error("Không có dữ liệu nến để dự đoán");
+      }
+
+      // 2️⃣ Gọi API predict
+      const predictRes = await predictService.predict(candles.data);
+      
+      if (predictRes.data?.status === "success") {
+        console.log(predictRes.data.result)
+        setPredictionResult({
+          symbol,
+          ...predictRes.data.result
+        });
+      } else {
+        throw new Error("Predict API trả về lỗi");
+      }
+    } catch (err) {
+      console.error(err);
+      setPredictionError(err.message || "Lỗi khi fetch dữ liệu dự đoán");
+      setPredictionResult(null);
+    } finally {
+      setLoadingPrediction(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Chart Section - Section 3 */}
-          <div className="flex-1 p-4 overflow-hidden">
+          <div className="flex-1 p-4 overflow-auto">
             <div className="bg-white rounded-lg h-full shadow-sm flex flex-col">
               <div className="p-4 border-b flex-shrink-0">
                 <div className="flex items-center justify-between">
@@ -65,8 +91,10 @@ const HomePage = () => {
               </div>
               
               {/* Multi-Chart Dashboard */}
-              <div className="flex-1 overflow-hidden">
-                <MultiChartDashboard/>
+              <div className="flex-1 overflow-auto">
+                <MultiChartDashboard
+                  onPredictNextCandle={handlePredictNextCandle}
+                />
               </div>
             </div>
           </div>
@@ -74,6 +102,28 @@ const HomePage = () => {
 
         {/* Right Sidebar - Sections 4 & 5 */}
         <div className="w-80 bg-white border-l flex flex-col">
+
+          {/* Prediction Section */}
+            {predictionResult && (
+              <div className="p-3 mb-4 bg-white border rounded shadow-sm">
+                <h3 className="font-semibold mb-2 text-purple-600">📊 Prediction for {predictionResult.symbol}</h3>
+                {loadingPrediction ? (
+                  <p>Loading prediction...</p>
+                ) : predictionError ? (
+                  <p className="text-red-500 text-xs">{predictionError}</p>
+                ) : (
+                  <div className="text-xs text-gray-700 space-y-1">
+                    <p>Last Close: {predictionResult.last_close}</p>
+                    <p>Predicted Next Close: {predictionResult.predicted_next_close}</p>
+                    <p>Trend: {predictionResult.trend}</p>
+                    <p>Change %: {predictionResult.change_percent}%</p>
+                    <p>Updated at: {new Date().toLocaleTimeString('vi-VN')}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+
           {/* News Section - Section 4 */}
           <div className="flex-1 p-4 border-b">
             <h3 className="font-semibold mb-3 text-red-600">📈 Trending Headlines</h3>

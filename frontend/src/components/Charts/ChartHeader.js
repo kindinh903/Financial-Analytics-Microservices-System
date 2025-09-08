@@ -12,6 +12,7 @@ const ChartHeader = ({
   priceChangePercent,
   onShowIndicatorSelector,
   onRemoveIndicator,
+  onPredictNextCandle, // thêm prop mới
   isConnected = false
 }) => {
   return (
@@ -112,13 +113,22 @@ const ChartHeader = ({
         </button>
       </div>
 
-      {/* Right side - Remove button */}
-      <button 
-        onClick={onRemove}
-        className="text-red-500 hover:text-red-700 text-sm font-medium"
-      >
-        Remove
-      </button>
+      {/* Right side - Predict & Remove buttons */}
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={() => onPredictNextCandle(chartConfig)}
+          className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        >
+          Predict Next Candle
+        </button>
+
+        <button 
+          onClick={onRemove}
+          className="text-red-500 hover:text-red-700 text-sm font-medium"
+        >
+          Remove
+        </button>
+      </div>
     </div>
   );
 };

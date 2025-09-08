@@ -10,7 +10,15 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+const PREDICT_API_BASE_URL = 'http://localhost:8084';
 
+const predictApi = axios.create({
+  baseURL: PREDICT_API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
@@ -79,7 +87,8 @@ export const priceService = {
 
   // Get market overview
   getMarketOverview: () =>
-    api.get('/api/price/market-overview'),
+    api.get('/api/price/market-overview')
+
 };
 
 // Auth service endpoints
@@ -183,13 +192,14 @@ export const backtestService = {
   deleteBacktestResult: (id) =>
     api.delete(`/api/backtest/${id}`),
 
-  // Get available trading strategies
-  getAvailableStrategies: () =>
-    api.get('/api/backtest/strategies'),
+  // Note: Backend doesn't have these endpoints yet, commented out
+  // // Get available trading strategies
+  // getAvailableStrategies: () =>
+  //   api.get('/api/backtest/strategies'),
 
-  // Get strategy information by name
-  getStrategyInfo: (strategyName) =>
-    api.get(`/api/backtest/strategies/${strategyName}`),
+  // // Get strategy information by name
+  // getStrategyInfo: (strategyName) =>
+  //   api.get(`/api/backtest/strategies/${strategyName}`),
 
   // Get backtest statistics summary
   getBacktestStats: (params = {}) =>
@@ -234,9 +244,26 @@ export const crawlerService = {
   exportSentimentCSV: (symbol, days = 30) =>
     api.get(`/api/crawler/data/export/csv/${symbol}`, { params: { days } }),
 
+  // Read from CSV
+  readFromCSV: (symbol, limit = 50) =>
+    api.get(`/api/crawler/data/read/csv/${symbol}`, { params: { limit } }),
+
   // Get warehouse stats
   getWarehouseStats: () =>
     api.get('/api/crawler/data/warehouse/stats'),
 };
+
+
+
+// Predict service endpoints
+export const predictService = {
+  // Predict next candle/price
+  predict: (ohlcvData, modelDir = "models") =>
+    predictApi.post('/predict', {
+      data: ohlcvData,
+      model_dir: modelDir,
+    }),
+};
+
 
 export default api;

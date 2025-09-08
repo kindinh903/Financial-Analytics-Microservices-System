@@ -7,7 +7,6 @@ import {
   message, 
   Avatar, 
   Upload, 
-  Switch, 
   Select, 
   DatePicker, 
   Row, 
@@ -22,12 +21,9 @@ import {
   UserOutlined, 
   CameraOutlined, 
   SettingOutlined, 
-  BellOutlined,
-  HomeOutlined,
   CrownOutlined,
   CalendarOutlined,
   PhoneOutlined,
-  GlobalOutlined,
   DashboardOutlined
 } from '@ant-design/icons';
 import { userService } from '../services/api';
@@ -39,8 +35,6 @@ const { TextArea } = Input;
 
 const Profile = () => {
   const [form] = Form.useForm();
-  const [preferencesForm] = Form.useForm();
-  const [addressForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -70,22 +64,6 @@ const Profile = () => {
           dateOfBirth: userData.dateOfBirth ? moment(userData.dateOfBirth) : null
         });
 
-        preferencesForm.setFieldsValue({
-          theme: userData.preferences?.theme || 'light',
-          timezone: userData.preferences?.timezone || 'UTC',
-          currency: userData.preferences?.currency || 'USD',
-          emailNotifications: userData.preferences?.notifications?.email || true,
-          pushNotifications: userData.preferences?.notifications?.push || true,
-          smsNotifications: userData.preferences?.notifications?.sms || false
-        });
-
-        addressForm.setFieldsValue({
-          street: userData.address?.street,
-          city: userData.address?.city,
-          state: userData.address?.state,
-          country: userData.address?.country,
-          zipCode: userData.address?.zipCode
-        });
 
         // ✅ Cập nhật localStorage với dữ liệu mới từ API
         localStorage.setItem('user', JSON.stringify(userData));
@@ -122,56 +100,6 @@ const Profile = () => {
     setLoading(false);
   };
 
-  const onFinishPreferences = async (values) => {
-    setLoading(true);
-    try {
-      const preferencesData = {
-        preferences: {
-          theme: values.theme,
-          timezone: values.timezone,
-          currency: values.currency,
-          notifications: {
-            email: values.emailNotifications,
-            push: values.pushNotifications,
-            sms: values.smsNotifications
-          }
-        }
-      };
-      
-      // ✅ Gọi API update profile với preferences
-      const res = await userService.updateProfile(preferencesData);
-      if (res.data.success) {
-        message.success('Cập nhật cài đặt thành công!');
-        await fetchUserProfile();
-      } else {
-        message.error('Cập nhật thất bại: ' + res.data.message);
-      }
-    } catch (err) {
-      console.error('Error updating preferences:', err);
-      message.error('Lỗi cập nhật: ' + (err.response?.data?.message || err.message));
-    }
-    setLoading(false);
-  };
-
-  const onFinishAddress = async (values) => {
-    setLoading(true);
-    try {
-      const addressData = { address: values };
-      
-      // ✅ Gọi API update profile với address
-      const res = await userService.updateProfile(addressData);
-      if (res.data.success) {
-        message.success('Cập nhật địa chỉ thành công!');
-        await fetchUserProfile();
-      } else {
-        message.error('Cập nhật thất bại: ' + res.data.message);
-      }
-    } catch (err) {
-      console.error('Error updating address:', err);
-      message.error('Lỗi cập nhật: ' + (err.response?.data?.message || err.message));
-    }
-    setLoading(false);
-  };
 
   const handleAvatarUpload = async (file) => {
     const formData = new FormData();
@@ -216,6 +144,13 @@ const Profile = () => {
     };
     
     return <Tag color={planColors[subscription.plan]}>{subscription.plan.toUpperCase()}</Tag>;
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
   // ✅ Loading state
@@ -266,11 +201,6 @@ const Profile = () => {
                   icon={<UserOutlined />}
                   className="mb-4"
                 />
-                <div className="mt-2">
-                  <Button icon={<CameraOutlined />} type="text">
-                    Thay đổi ảnh
-                  </Button>
-                </div>
               </Upload>
               
               <Divider />
@@ -291,17 +221,6 @@ const Profile = () => {
                   {getSubscriptionStatus(user.subscription)}
                 </div>
                 
-                {user.features && user.features.length > 0 && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Tính năng:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {user.features.map((feature, index) => (
-                        <Tag key={index} size="small">{feature}</Tag>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
                 {/* Admin Panel Access Button */}
                 {user.role === 'admin' && (
                   <div className="mt-4 pt-4 border-t">
@@ -316,6 +235,7 @@ const Profile = () => {
                     </Button>
                   </div>
                 )}
+
               </div>
             </Card>
           </Col>
@@ -384,168 +304,22 @@ const Profile = () => {
         </Row>
       ),
     },
-    {
-      key: 'address',
-      label: (
-        <span>
-          <HomeOutlined />
-          Địa chỉ
-        </span>
-      ),
-      children: (
-        <Card title="Thông tin địa chỉ">
-          <Form
-            form={addressForm}
-            layout="vertical"
-            onFinish={onFinishAddress}
-          >
-            <Form.Item label="Địa chỉ" name="street">
-              <Input placeholder="Số nhà, tên đường..." />
-            </Form.Item>
-            
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label="Thành phố" name="city">
-                  <Input placeholder="Thành phố" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Tỉnh/Bang" name="state">
-                  <Input placeholder="Tỉnh/Bang" />
-                </Form.Item>
-              </Col>
-            </Row>
-            
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label="Quốc gia" name="country">
-                  <Select placeholder="Chọn quốc gia">
-                    <Option value="VN">Việt Nam</Option>
-                    <Option value="US">Hoa Kỳ</Option>
-                    <Option value="JP">Nhật Bản</Option>
-                    <Option value="KR">Hàn Quốc</Option>
-                    <Option value="CN">Trung Quốc</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Mã bưu chính" name="zipCode">
-                  <Input placeholder="Mã bưu chính" />
-                </Form.Item>
-              </Col>
-            </Row>
-            
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading} size="large">
-                Cập nhật địa chỉ
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-    {
-      key: 'preferences',
-      label: (
-        <span>
-          <SettingOutlined />
-          Cài đặt
-        </span>
-      ),
-      children: (
-        <Card title="Tùy chỉnh & Thông báo">
-          <Form
-            form={preferencesForm}
-            layout="vertical"
-            onFinish={onFinishPreferences}
-          >
-            <Row gutter={24}>
-              <Col xs={24} md={12}>
-                <Card size="small" title="Giao diện" className="mb-4">
-                  <Form.Item label="Chủ đề" name="theme">
-                    <Select>
-                      <Option value="light">Sáng</Option>
-                      <Option value="dark">Tối</Option>
-                    </Select>
-                  </Form.Item>
-                  
-                  <Form.Item label="Múi giờ" name="timezone">
-                    <Select>
-                      <Option value="UTC">UTC</Option>
-                      <Option value="Asia/Ho_Chi_Minh">Hồ Chí Minh</Option>
-                      <Option value="America/New_York">New York</Option>
-                      <Option value="Europe/London">London</Option>
-                      <Option value="Asia/Tokyo">Tokyo</Option>
-                    </Select>
-                  </Form.Item>
-                  
-                  <Form.Item label="Tiền tệ" name="currency">
-                    <Select>
-                      <Option value="VND">VND (₫)</Option>
-                      <Option value="USD">USD ($)</Option>
-                      <Option value="EUR">EUR (€)</Option>
-                      <Option value="JPY">JPY (¥)</Option>
-                    </Select>
-                  </Form.Item>
-                </Card>
-              </Col>
-              
-              <Col xs={24} md={12}>
-                <Card size="small" title={<><BellOutlined /> Thông báo</>}>
-                  <Form.Item 
-                    label="Email thông báo" 
-                    name="emailNotifications" 
-                    valuePropName="checked"
-                  >
-                    <Switch />
-                  </Form.Item>
-                  
-                  <Form.Item 
-                    label="Thông báo đẩy" 
-                    name="pushNotifications" 
-                    valuePropName="checked"
-                  >
-                    <Switch />
-                  </Form.Item>
-                  
-                  <Form.Item 
-                    label="SMS thông báo" 
-                    name="smsNotifications" 
-                    valuePropName="checked"
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Card>
-              </Col>
-            </Row>
-            
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading} size="large">
-                Lưu cài đặt
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Hồ sơ cá nhân</h1>
-          <p className="text-gray-600">Quản lý thông tin cá nhân và cài đặt tài khoản</p>
-        </div>
-        
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-          size="large"
-          className="bg-white rounded-lg shadow-sm p-4"
-        />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+        <p className="mt-2 text-gray-600">Manage your personal information and account settings</p>
       </div>
+      
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={tabItems}
+        size="large"
+        className="bg-white rounded-lg shadow-sm p-4"
+      />
     </div>
   );
 };

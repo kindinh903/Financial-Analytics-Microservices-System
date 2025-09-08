@@ -4,7 +4,7 @@ import ChartsContainer from './ChartsContainer';
 import MultiChartModal from './MultiChartModal';
 import EmptyState from './EmptyState';
 
-const MultiChartDashboard = () => {
+const MultiChartDashboard = ({ onPredictNextCandle }) => {
   const [charts, setCharts] = useState([
     { 
       id: 1, 
@@ -75,6 +75,7 @@ const MultiChartDashboard = () => {
           charts={charts}
           onRemoveChart={removeChart}
           onUpdateChart={updateChart}
+          onPredictNextCandle={onPredictNextCandle} // <-- truyền xuống
         />
       ) : (
         <EmptyState onAddChart={addChart} />
