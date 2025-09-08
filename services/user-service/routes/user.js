@@ -72,6 +72,8 @@ router.get('/admin/test', (req, res) => {
 router.get('/admin/users', requireRole(['admin']), async (req, res) => {
   try {
     const { page = 1, limit = 10, search, role, isActive } = req.query;
+    console.log('Admin users request params:', { page, limit, search, role, isActive });
+    
     const query = {};
 
     // Build search query
@@ -91,21 +93,35 @@ router.get('/admin/users', requireRole(['admin']), async (req, res) => {
       query.isActive = isActive === 'true';
     }
 
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    console.log('Query params:', { pageNum, limitNum, skip, query });
+
     const users = await User.find(query)
       .select('-__v')
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(limitNum)
+      .skip(skip);
 
     const total = await User.countDocuments(query);
+    const pages = Math.ceil(total / limitNum);
+
+    console.log('Query results:', { 
+      usersCount: users.length, 
+      total, 
+      pages, 
+      currentPage: pageNum 
+    });
 
     res.json({
       success: true,
       users,
       pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total
+        current: pageNum,
+        pages: pages,
+        total: total
       }
     });
   } catch (error) {

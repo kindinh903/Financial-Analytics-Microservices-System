@@ -61,6 +61,12 @@ const AdminPanel = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('users');
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    pages: 0
+  });
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
@@ -69,27 +75,82 @@ const AdminPanel = () => {
   });
 
   useEffect(() => {
+    console.log('Initial useEffect - fetching users and stats');
     fetchUsers();
     fetchStats();
   }, []);
 
-  useEffect(() => {
-    filterUsers();
-  }, [users, searchText]);
+  // Remove the problematic useEffect that causes loops
+  // useEffect(() => {
+  //   console.log('Pagination/Search useEffect triggered:', {
+  //     paginationCurrent: pagination.current,
+  //     paginationPageSize: pagination.pageSize,
+  //     searchText: searchText
+  //   });
+    
+  //   if (pagination.current > 0) { // Only fetch if pagination is initialized
+  //     console.log('Calling fetchUsers from useEffect');
+  //     fetchUsers();
+  //   }
+  // }, [pagination.current, pagination.pageSize, searchText]);
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    console.log('Users changed, filtering users. Users count:', users.length);
+    filterUsers();
+  }, [users]);
+
+  const fetchUsers = async (customParams = {}) => {
+    console.log('=== fetchUsers START ===');
+    console.log('Current pagination state:', pagination);
+    console.log('Custom params received:', customParams);
+    console.log('Current searchText:', searchText);
+    
     setLoading(true);
     try {
-      // This would be an admin endpoint to get all users
-      const response = await userService.getAllUsers();
+      // Pass pagination parameters to the API
+      const params = {
+        page: customParams.page || pagination.current,
+        limit: customParams.limit || pagination.pageSize,
+        search: customParams.search !== undefined ? customParams.search : searchText,
+        ...customParams
+      };
+      
+      console.log('Final API params to be sent:', params);
+      
+      const response = await userService.getAllUsers(params);
+      console.log('API response received:', response.data);
+      
       if (response.data.success) {
+        console.log('Setting users. Count:', response.data.users.length);
         setUsers(response.data.users);
+        
+        // Update pagination state with server response
+        if (response.data.pagination) {
+          console.log('Updating pagination state with server response:', response.data.pagination);
+          console.log('Previous pagination state:', pagination);
+          
+          setPagination(prev => {
+            const newPagination = {
+              ...prev,
+              current: response.data.pagination.current,
+              total: response.data.pagination.total,
+              pages: response.data.pagination.pages
+            };
+            console.log('New pagination state will be:', newPagination);
+            return newPagination;
+          });
+        } else {
+          console.log('No pagination data in response');
+        }
+      } else {
+        console.log('API response not successful:', response.data);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
       message.error('Failed to fetch users');
     }
     setLoading(false);
+    console.log('=== fetchUsers END ===');
   };
 
   const fetchStats = async () => {
@@ -105,18 +166,15 @@ const AdminPanel = () => {
   };
 
   const filterUsers = () => {
-    if (!searchText) {
-      setFilteredUsers(users);
-      return;
-    }
+    console.log('=== filterUsers START ===');
+    console.log('Users to filter:', users.length);
+    console.log('Search text:', searchText);
     
-    const filtered = users.filter(user => 
-      user.firstName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.lastName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.role?.toLowerCase().includes(searchText.toLowerCase())
-    );
-    setFilteredUsers(filtered);
+    // When using server-side pagination, we don't filter on client side
+    // The filtering is handled by the search parameter sent to the server
+    setFilteredUsers(users);
+    console.log('Filtered users set to:', users.length);
+    console.log('=== filterUsers END ===');
   };
 
   const handleUserAction = (action, user) => {
@@ -173,7 +231,7 @@ const AdminPanel = () => {
       const response = await userService.deleteUser(userId);
       if (response.data.success) {
         message.success('User deleted successfully');
-        fetchUsers();
+        fetchUsers(); // Refetch current page
       }
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -188,12 +246,45 @@ const AdminPanel = () => {
       });
       if (response.data.success) {
         message.success(`User ${user.isActive ? 'deactivated' : 'activated'} successfully`);
-        fetchUsers();
+        fetchUsers(); // Refetch current page
       }
     } catch (error) {
       console.error('Error updating user status:', error);
       message.error('Failed to update user status');
     }
+  };
+
+  const handleTableChange = (paginationInfo) => {
+    console.log('=== handleTableChange START ===');
+    console.log('paginationInfo received:', paginationInfo);
+    console.log('Current pagination state before change:', pagination);
+    
+    // Fetch users with new pagination immediately - don't update state first
+    const fetchParams = {
+      page: paginationInfo.current,
+      limit: paginationInfo.pageSize
+    };
+    console.log('Calling fetchUsers with params:', fetchParams);
+    fetchUsers(fetchParams);
+    console.log('=== handleTableChange END ===');
+  };
+
+  const handleSearch = (value) => {
+    console.log('=== handleSearch START ===');
+    console.log('Search value:', value);
+    console.log('Current pagination before search:', pagination);
+    
+    setSearchText(value);
+    
+    // Fetch with search params immediately - don't update pagination state first
+    const fetchParams = {
+      page: 1,
+      limit: pagination.pageSize,
+      search: value
+    };
+    console.log('Calling fetchUsers with search params:', fetchParams);
+    fetchUsers(fetchParams);
+    console.log('=== handleSearch END ===');
   };
 
   const getRoleColor = (role) => {
@@ -322,8 +413,16 @@ const AdminPanel = () => {
             <Search
               placeholder="Search users..."
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === '') {
+                  // If search is cleared, fetch all users
+                  handleSearch('');
+                }
+              }}
+              onSearch={handleSearch}
               style={{ width: 300 }}
+              allowClear
+              onClear={() => handleSearch('')}
             />
             <Space>
               <Button 
@@ -349,12 +448,24 @@ const AdminPanel = () => {
             rowKey="_id"
             loading={loading}
             pagination={{
-              pageSize: 10,
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) => 
                 `${range[0]}-${range[1]} of ${total} users`,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              onShowSizeChange: (current, size) => {
+                console.log('=== onShowSizeChange ===');
+                console.log('Page size change - current:', current, 'size:', size);
+                handleTableChange({
+                  current: 1,
+                  pageSize: size
+                });
+              }
             }}
+            onChange={handleTableChange}
           />
         </div>
       ),

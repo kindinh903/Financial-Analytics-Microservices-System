@@ -128,8 +128,8 @@ export const userService = {
     api.put('/api/user/address', address),
 
   // Admin endpoints
-  getAllUsers: () =>
-    api.get('/api/user/admin/users'),
+  getAllUsers: (params = {}) =>
+    api.get('/api/user/admin/users', { params }),
 
   getUserById: (userId) =>
     api.get(`/api/user/admin/users/${userId}`),
