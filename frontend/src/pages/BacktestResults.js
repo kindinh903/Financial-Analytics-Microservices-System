@@ -1,6 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  Card, 
+  Statistic, 
+  Row, 
+  Col, 
+  Table, 
+  Tag, 
+  Button, 
+  Space, 
+  Spin, 
+  Alert, 
+  Typography, 
+  Divider,
+  Progress,
+  Tooltip
+} from 'antd';
+import {
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  TrophyOutlined,
+  DollarOutlined,
+  PercentageOutlined,
+  LineChartOutlined,
+  HistoryOutlined,
+  PlusOutlined
+} from '@ant-design/icons';
 import { backtestService } from '../services/api';
+
+const { Title, Text } = Typography;
 
 const BacktestResults = () => {
   const { id } = useParams();
@@ -33,23 +61,27 @@ const BacktestResults = () => {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
-  const formatPercentage = (value) => {
-    return `${(value * 100).toFixed(2)}%`;
+  const formatPercentage = (value, decimals = 2) => {
+    return `${value?.toFixed(decimals)}%`;
   };
 
-  const getPerformanceColor = (value) => {
-    if (value > 0) return 'text-green-600';
-    if (value < 0) return 'text-red-600';
-    return 'text-gray-600';
+  const formatLargeNumber = (value) => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(2)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(2)}K`;
+    }
+    return value?.toFixed(2);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Spin size="large" tip="Loading backtest results..." />
       </div>
     );
   }
@@ -57,305 +89,373 @@ const BacktestResults = () => {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex">
-            <div className="text-red-400">⚠️</div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <div className="mt-2 text-sm text-red-700">{error}</div>
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={() => navigate('/backtest')}
-          className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          className="mb-4"
+        />
+        <Button type="primary" onClick={() => navigate('/backtest')}>
           Back to Backtest
-        </button>
+        </Button>
       </div>
     );
   }
 
   if (!result) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Backtest Result Not Found</h2>
-          <button
-            onClick={() => navigate('/backtest')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            Back to Backtest
-          </button>
-        </div>
+      <div className="max-w-7xl mx-auto p-6 text-center">
+        <Alert
+          message="Backtest Result Not Found"
+          description="The requested backtest result could not be found."
+          type="warning"
+          showIcon
+          className="mb-4"
+        />
+        <Button type="primary" onClick={() => navigate('/backtest')}>
+          Back to Backtest
+        </Button>
       </div>
     );
   }
 
+  // Calculate derived metrics
+  const profitLoss = result.finalBalance - result.initialBalance;
+  const avgTradeReturn = result.totalTrades > 0 ? result.totalReturn / result.totalTrades : 0;
+  const profitFactor = result.losingTrades > 0 && result.winningTrades > 0 ? 
+    (result.winningTrades / result.totalTrades) / (result.losingTrades / result.totalTrades) : 0;
+
+  // Prepare table columns for trades
+  const tradeColumns = [
+    {
+      title: 'Time',
+      dataIndex: 'timestamp',
+      key: 'timestamp',
+      render: (timestamp) => new Date(timestamp).toLocaleString(),
+      width: 150,
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type) => (
+        <Tag color={type === 'BUY' ? 'green' : 'red'}>
+          {type}
+        </Tag>
+      ),
+      width: 80,
+    },
+    {
+      title: 'Price',
+      dataIndex: 'price',
+      key: 'price',
+      render: (price) => formatCurrency(price),
+      width: 120,
+    },
+    {
+      title: 'Quantity',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      render: (quantity) => quantity?.toFixed(6),
+      width: 120,
+    },
+    {
+      title: 'Commission',
+      dataIndex: 'commission',
+      key: 'commission',
+      render: (commission) => formatCurrency(commission),
+      width: 100,
+    },
+    {
+      title: 'P&L',
+      dataIndex: 'pnL',
+      key: 'pnL',
+      render: (pnL) => (
+        <Text type={pnL >= 0 ? 'success' : 'danger'}>
+          {formatCurrency(pnL)}
+        </Text>
+      ),
+      width: 100,
+    },
+    {
+      title: 'Correct',
+      dataIndex: 'isCorrect',
+      key: 'isCorrect',
+      render: (isCorrect) => (
+        <Tag color={isCorrect ? 'green' : 'red'}>
+          {isCorrect ? 'Yes' : 'No'}
+        </Tag>
+      ),
+      width: 80,
+    },
+    {
+      title: 'Reason',
+      dataIndex: 'reason',
+      key: 'reason',
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (reason) => (
+        <Tooltip placement="topLeft" title={reason}>
+          {reason}
+        </Tooltip>
+      ),
+    },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Backtest Results</h1>
-          <p className="mt-2 text-gray-600">
+          <Title level={2} className="mb-2">Backtest Results</Title>
+          <Text type="secondary">
             {result.symbol} • {result.interval} • {new Date(result.startDate).toLocaleDateString()} - {new Date(result.endDate).toLocaleDateString()}
-          </p>
+          </Text>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => navigate('/backtest/history')}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
+        <Space>
+          <Button icon={<HistoryOutlined />} onClick={() => navigate('/backtest/history')}>
             View History
-          </button>
-          <button
-            onClick={() => navigate('/backtest')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/backtest')}>
             New Backtest
-          </button>
-        </div>
+          </Button>
+        </Space>
       </div>
 
-      {/* Performance Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-600 text-sm font-medium">$</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Return</p>
-              <p className={`text-2xl font-bold ${getPerformanceColor(result.totalReturnPercent)}`}>
-                {formatPercentage(result.totalReturnPercent)}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Key Performance Indicators */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Return"
+              value={result.totalReturnPercent}
+              suffix="%"
+              precision={2}
+              valueStyle={{ 
+                color: result.totalReturnPercent >= 0 ? '#3f8600' : '#cf1322',
+                fontSize: '24px'
+              }}
+              prefix={result.totalReturnPercent >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Win Rate"
+              value={result.winRate}
+              suffix="%"
+              precision={1}
+              valueStyle={{ color: '#1890ff', fontSize: '24px' }}
+              prefix={<TrophyOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Profit/Loss"
+              value={profitLoss}
+              precision={2}
+              formatter={(value) => formatCurrency(value)}
+              valueStyle={{ 
+                color: profitLoss >= 0 ? '#3f8600' : '#cf1322',
+                fontSize: '20px'
+              }}
+              prefix={<DollarOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Max Drawdown"
+              value={result.maxDrawdown * 100}
+              suffix="%"
+              precision={2}
+              valueStyle={{ color: '#cf1322', fontSize: '24px' }}
+              prefix={<ArrowDownOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600 text-sm font-medium">%</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Win Rate</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatPercentage(result.winRate)}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Detailed Metrics */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} lg={12}>
+          <Card title="Financial Summary" extra={<DollarOutlined />}>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <Statistic
+                  title="Initial Balance"
+                  value={result.initialBalance}
+                  formatter={(value) => formatCurrency(value)}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Final Balance"
+                  value={result.finalBalance}
+                  formatter={(value) => formatCurrency(value)}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Total Return"
+                  value={result.totalReturn}
+                  formatter={(value) => formatCurrency(value)}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Avg Trade Return"
+                  value={avgTradeReturn}
+                  formatter={(value) => formatCurrency(value)}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+        
+        <Col xs={24} lg={12}>
+          <Card title="Trading Statistics" extra={<LineChartOutlined />}>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <Statistic title="Total Trades" value={result.totalTrades} />
+              </Col>
+              <Col span={12}>
+                <div>
+                  <Text type="secondary">Win/Loss Ratio</Text>
+                  <div className="mt-1">
+                    <Progress 
+                      percent={result.winRate} 
+                      format={() => `${result.winningTrades}/${result.losingTrades}`}
+                      strokeColor="#52c41a"
+                      trailColor="#ff4d4f"
+                    />
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <Statistic title="Winning Trades" value={result.winningTrades} valueStyle={{ color: '#3f8600' }} />
+              </Col>
+              <Col span={12}>
+                <Statistic title="Losing Trades" value={result.losingTrades} valueStyle={{ color: '#cf1322' }} />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-purple-600 text-sm font-medium">S</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Sharpe Ratio</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {result.sharpeRatio?.toFixed(2) || 'N/A'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                <span className="text-red-600 text-sm font-medium">↓</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Max Drawdown</p>
-              <p className="text-2xl font-bold text-red-600">
-                {formatPercentage(result.maxDrawdown)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Detailed Results */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Trading Statistics */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Trading Statistics</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Trades</span>
-              <span className="font-medium">{result.totalTrades}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Winning Trades</span>
-              <span className="font-medium text-green-600">{result.winningTrades}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Losing Trades</span>
-              <span className="font-medium text-red-600">{result.losingTrades}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Average Win</span>
-              <span className="font-medium text-green-600">
-                {formatPercentage(result.averageWin)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Average Loss</span>
-              <span className="font-medium text-red-600">
-                {formatPercentage(result.averageLoss)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Profit Factor</span>
-              <span className="font-medium">{result.profitFactor?.toFixed(2) || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Financial Summary */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Financial Summary</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Initial Capital</span>
-              <span className="font-medium">{formatCurrency(result.initialCapital)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Final Capital</span>
-              <span className="font-medium">{formatCurrency(result.finalCapital)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Profit/Loss</span>
-              <span className={`font-medium ${getPerformanceColor(result.totalReturnPercent)}`}>
-                {formatCurrency(result.finalCapital - result.initialCapital)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Accuracy</span>
-              <span className="font-medium">{formatPercentage(result.accuracy)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Backtest Duration</span>
-              <span className="font-medium">
-                {Math.ceil((new Date(result.endDate) - new Date(result.startDate)) / (1000 * 60 * 60 * 24))} days
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Performance Metrics */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} lg={12}>
+          <Card title="Risk Metrics" extra={<PercentageOutlined />}>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <Statistic
+                  title="Sharpe Ratio"
+                  value={result.sharpeRatio}
+                  precision={4}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Max Drawdown"
+                  value={result.maxDrawdown * 100}
+                  suffix="%"
+                  precision={2}
+                  valueStyle={{ color: '#cf1322' }}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Accuracy"
+                  value={result.accuracy * 100}
+                  suffix="%"
+                  precision={1}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Precision"
+                  value={result.precision * 100}
+                  suffix="%"
+                  precision={1}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+        
+        <Col xs={24} lg={12}>
+          <Card title="AI Performance" extra={<TrophyOutlined />}>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <Statistic
+                  title="Precision"
+                  value={result.precision * 100}
+                  suffix="%"
+                  precision={1}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Recall"
+                  value={result.recall * 100}
+                  suffix="%"
+                  precision={1}
+                />
+              </Col>
+              <Col span={24}>
+                <Statistic
+                  title="F1 Score"
+                  value={result.f1Score * 100}
+                  suffix="%"
+                  precision={1}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Strategy Information */}
-      <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Strategy Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-md font-medium text-gray-700 mb-2">Strategy Details</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Strategy Name</span>
-                <span className="font-medium">{result.strategyName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Symbol</span>
-                <span className="font-medium">{result.symbol}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Interval</span>
-                <span className="font-medium">{result.interval}</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-md font-medium text-gray-700 mb-2">Parameters</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Stop Loss</span>
-                <span className="font-medium">{result.stopLossPercent}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Take Profit</span>
-                <span className="font-medium">{result.takeProfitPercent}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Card title="Strategy Information" className="mb-6">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={8}>
+            <Text strong>Symbol:</Text> <Text>{result.symbol}</Text>
+          </Col>
+          <Col xs={24} md={8}>
+            <Text strong>Interval:</Text> <Text>{result.interval}</Text>
+          </Col>
+          <Col xs={24} md={8}>
+            <Text strong>Duration:</Text> <Text>
+              {Math.ceil((new Date(result.endDate) - new Date(result.startDate)) / (1000 * 60 * 60 * 24))} days
+            </Text>
+          </Col>
+        </Row>
+      </Card>
 
       {/* Trade History */}
       {result.trades && result.trades.length > 0 && (
-        <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Trades</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entry Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Exit Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entry Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Exit Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    P&L
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {result.trades.slice(0, 10).map((trade, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(trade.entryTime).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.exitTime ? new Date(trade.exitTime).toLocaleString() : 'Open'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(trade.entryPrice)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {trade.exitPrice ? formatCurrency(trade.exitPrice) : '-'}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                      trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {trade.pnl ? formatCurrency(trade.pnl) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        trade.status === 'WIN' 
-                          ? 'bg-green-100 text-green-800'
-                          : trade.status === 'LOSS'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {trade.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Card title={`Trade History (${result.trades.length} trades)`}>
+          <Table
+            columns={tradeColumns}
+            dataSource={result.trades}
+            rowKey={(record, index) => record.id || index}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => 
+                `${range[0]}-${range[1]} of ${total} trades`,
+            }}
+            scroll={{ x: 800 }}
+          />
+        </Card>
       )}
     </div>
   );

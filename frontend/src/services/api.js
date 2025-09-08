@@ -183,13 +183,14 @@ export const backtestService = {
   deleteBacktestResult: (id) =>
     api.delete(`/api/backtest/${id}`),
 
-  // Get available trading strategies
-  getAvailableStrategies: () =>
-    api.get('/api/backtest/strategies'),
+  // Note: Backend doesn't have these endpoints yet, commented out
+  // // Get available trading strategies
+  // getAvailableStrategies: () =>
+  //   api.get('/api/backtest/strategies'),
 
-  // Get strategy information by name
-  getStrategyInfo: (strategyName) =>
-    api.get(`/api/backtest/strategies/${strategyName}`),
+  // // Get strategy information by name
+  // getStrategyInfo: (strategyName) =>
+  //   api.get(`/api/backtest/strategies/${strategyName}`),
 
   // Get backtest statistics summary
   getBacktestStats: (params = {}) =>
