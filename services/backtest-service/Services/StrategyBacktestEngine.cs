@@ -107,8 +107,8 @@ namespace BacktestService.Services
 
             // Set risk management parameters
             parameters.SetParameter("MaxDrawdown", request.MaxDrawdown);
-            parameters.SetParameter("StopLoss", request.StopLoss);
-            parameters.SetParameter("TakeProfit", request.TakeProfit);
+            parameters.SetParameter("StopLoss", request.GetStopLoss());
+            parameters.SetParameter("TakeProfit", request.GetTakeProfit());
 
             return parameters;
         }
@@ -153,18 +153,22 @@ namespace BacktestService.Services
                 // Execute trades based on signal
                 if (signal.Type == SignalType.BUY && position <= 0)
                 {
-                    // Buy signal
-                    var quantity = context.CurrentBalance / candle.Close;
-                    var commission = quantity * candle.Close * request.Commission;
+                    // Buy signal - use available balance minus commission
+                    var availableBalance = context.CurrentBalance;
+                    var totalCost = availableBalance;
+                    var commission = totalCost * request.Commission;
+                    var actualInvestment = totalCost - commission;
+                    var quantity = actualInvestment / candle.Close;
                     
-                    if (commission < context.CurrentBalance)
+                    if (totalCost <= context.CurrentBalance && quantity > 0)
                     {
                         position = quantity;
                         entryPrice = candle.Close;
-                        stopLossPrice = entryPrice * (1 - request.StopLoss);
-                        takeProfitPrice = entryPrice * (1 + request.TakeProfit);
+                        stopLossPrice = entryPrice * (1 - request.GetStopLoss());
+                        takeProfitPrice = entryPrice * (1 + request.GetTakeProfit());
                         
-                        context.CurrentBalance -= commission;
+                        // Deduct the full amount (investment + commission)
+                        context.CurrentBalance -= totalCost;
                         context.CurrentPosition = position;
 
                         var trade = new Trade
@@ -190,9 +194,11 @@ namespace BacktestService.Services
                     // Sell signal
                     var sellValue = position * candle.Close;
                     var commission = sellValue * request.Commission;
-                    var pnl = sellValue - (position * entryPrice) - commission;
+                    var netReceived = sellValue - commission;
+                    var totalCost = position * entryPrice; // Original investment
+                    var pnl = netReceived - totalCost;
 
-                    context.CurrentBalance += sellValue - commission;
+                    context.CurrentBalance += netReceived;
                     context.CurrentPosition = 0;
 
                     var trade = new Trade
@@ -225,9 +231,11 @@ namespace BacktestService.Services
                     {
                         var sellValue = position * candle.Close;
                         var commission = sellValue * request.Commission;
-                        var pnl = sellValue - (position * entryPrice) - commission;
+                        var netReceived = sellValue - commission;
+                        var totalCost = position * entryPrice; // Original investment
+                        var pnl = netReceived - totalCost;
 
-                        context.CurrentBalance += sellValue - commission;
+                        context.CurrentBalance += netReceived;
                         context.CurrentPosition = 0;
 
                         var reason = candle.Close <= stopLossPrice ? "STOP_LOSS" : "TAKE_PROFIT";
@@ -277,9 +285,11 @@ namespace BacktestService.Services
                 var lastPrice = historicalData.Last().Close;
                 var sellValue = position * lastPrice;
                 var commission = sellValue * request.Commission;
-                var pnl = sellValue - (position * entryPrice) - commission;
+                var netReceived = sellValue - commission;
+                var totalCost = position * entryPrice; // Original investment
+                var pnl = netReceived - totalCost;
 
-                context.CurrentBalance += sellValue - commission;
+                context.CurrentBalance += netReceived;
 
                 var trade = new Trade
                 {

@@ -37,11 +37,11 @@ namespace BacktestService.Models
                 };
             }
 
-            // Apply risk management
-            if (ShouldApplyRiskManagement(context))
-            {
-                return ApplyRiskManagement(context);
-            }
+            // Apply risk management - DISABLED to allow StrategyBacktestEngine to handle stop loss/take profit
+            // if (ShouldApplyRiskManagement(context))
+            // {
+            //     return ApplyRiskManagement(context);
+            // }
 
             // Generate the actual signal
             var signal = GenerateStrategySignal(context);

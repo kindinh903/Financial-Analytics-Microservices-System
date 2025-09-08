@@ -24,9 +24,16 @@ namespace BacktestService.Models
 
         public decimal MaxDrawdown { get; set; } = 0.1m;
         
+        // Support both percentage and decimal formats
         public decimal StopLoss { get; set; } = 0.05m;
+        public decimal? StopLossPercent { get; set; }
         
         public decimal TakeProfit { get; set; } = 0.1m;
+        public decimal? TakeProfitPercent { get; set; }
+        
+        // Computed properties to get the correct values
+        public decimal GetStopLoss() => StopLossPercent.HasValue ? StopLossPercent.Value / 100m : StopLoss;
+        public decimal GetTakeProfit() => TakeProfitPercent.HasValue ? TakeProfitPercent.Value / 100m : TakeProfit;
         
         public string? UserId { get; set; }
     }
