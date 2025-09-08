@@ -11,8 +11,5 @@ joblib
 python-dotenv
 numpy
 lightgbm
-xgboosting
-
 xgboost
-pydantic_settings
 minio

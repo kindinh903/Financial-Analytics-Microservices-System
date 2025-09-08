@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import requests
 import pandas as pd
-from app.config import settings
+from config import settings
 
 
 def fetch_fng_raw(limit: int = 1000):

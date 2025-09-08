@@ -8,8 +8,8 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import warnings
-from app.config import settings
-from app.minio_client import minio_client
+from config import settings
+from minio_client import minio_client
 
 
 MODEL_DIR = Path("./models")

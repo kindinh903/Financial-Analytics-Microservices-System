@@ -123,7 +123,7 @@ services:
       - Services__PriceService__BaseUrl=http://price-service:8081
     depends_on:
       - sqlserver
-      # - ai-service
+      # - ai-predict-service
       - price-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -133,25 +133,30 @@ services:
 
 
 
-  # ai-predict-service:          # đổi tên service ở đây
-  #   build: ./services/ai-predict-service   # đường dẫn mới tới folder
-  #   container_name: ai-predict-service     # đặt lại tên container
-  #   expose: ["8084"]         
-  #   ports:
-  #     - "8084:8084"
-  #   environment:
-  #     - KAFKA_BROKER=kafka:9092
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-  #   depends_on:
-  #     - kafka
-  #     - redis
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
+  ai-predict-service:          # đổi tên service ở đây
+    build: ./services/ai-predict-service   # đường dẫn mới tới folder
+    container_name: ai-predict-service     # đặt lại tên container
+    expose: ["8084"]         
+    ports:
+      - "8084:8084"
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=models
+    depends_on:
+      - kafka
+      - redis
+      - minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 
   user-service:

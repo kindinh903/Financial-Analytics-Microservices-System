@@ -1,10 +1,10 @@
 import os
 import pandas as pd
 from pathlib import Path
-from app.config import settings
-from app.sentiment_fng import get_fng, merge_fng_to_ohlcv
-from app.train_one import train_one
-from app.fetch_data import fetch_binance_kline  # bạn tách hàm fetch_binance_kline sang file riêng
+from config import settings
+from sentiment_fng import get_fng, merge_fng_to_ohlcv
+from train_one import train_one
+from fetch_data import fetch_binance_kline  # bạn tách hàm fetch_binance_kline sang file riêng
 
 
 DATA_DIR = Path(os.getenv("DATA_PATH", "./data/hist"))
