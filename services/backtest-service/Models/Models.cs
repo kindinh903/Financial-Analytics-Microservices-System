@@ -96,13 +96,46 @@ namespace BacktestService.Models
 
     public class CandleData
     {
-        public long OpenTime { get; set; }
+        public string Symbol { get; set; } = string.Empty;
+        public string Interval { get; set; } = string.Empty;
         public decimal Open { get; set; }
         public decimal High { get; set; }
         public decimal Low { get; set; }
         public decimal Close { get; set; }
         public decimal Volume { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("close_time")]
         public long CloseTime { get; set; }
+        
+        // Property để tương thích với code cũ
+        public long OpenTime
+        {
+            get
+            {
+                // Tính toán OpenTime dựa trên CloseTime và interval
+                var intervalMs = GetIntervalInMilliseconds(Interval);
+                return CloseTime - intervalMs + 1; // +1 để tránh overlap
+            }
+            set
+            {
+                // Cho phép set để tương thích với mock data
+                var intervalMs = GetIntervalInMilliseconds(Interval);
+                CloseTime = value + intervalMs - 1;
+            }
+        }
+        
+        private long GetIntervalInMilliseconds(string interval)
+        {
+            return interval?.ToLower() switch
+            {
+                "1m" => 60000,
+                "5m" => 300000,
+                "15m" => 900000,
+                "1h" => 3600000,
+                "6h" => 21600000,
+                "1d" => 86400000,
+                _ => 3600000 // default 1h
+            };
+        }
     }
 
     public class PriceDataResponse

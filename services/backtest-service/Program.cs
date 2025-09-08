@@ -16,7 +16,7 @@ builder.Services.AddDbContext<BacktestDbContext>(options =>
 
 // Add Mock Services for testing (comment out for production)
 builder.Services.AddScoped<IAiService, MockAiService>();
-builder.Services.AddScoped<IPriceService, MockPriceService>();
+// builder.Services.AddScoped<IPriceService, MockPriceService>();
 
 // Add HttpClient for external services (uncomment for production)
 // builder.Services.AddHttpClient<IAiService, AiService>(client =>
@@ -24,10 +24,10 @@ builder.Services.AddScoped<IPriceService, MockPriceService>();
 //     client.BaseAddress = new Uri(builder.Configuration["Services:AiService:BaseUrl"] ?? "http://ai-service:8084");
 // });
 
-// builder.Services.AddHttpClient<IPriceService, PriceService>(client =>
-// {
-//     client.BaseAddress = new Uri(builder.Configuration["Services:PriceService:BaseUrl"] ?? "http://price-service:8081");
-// });
+builder.Services.AddHttpClient<IPriceService, PriceService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:PriceService:BaseUrl"] ?? "http://price-service:8080");
+});
 
 // Add custom services
 builder.Services.AddScoped<IBacktestService, BacktestService.Services.BacktestService>();
