@@ -275,9 +275,9 @@ class EnhancedFinancialCrawler:
             # Count financial keywords
             text_lower = text.lower()
             keyword_scores = {
-                'positive': sum(1 for word in financial_keywords['positive'] if word in text_lower),
-                'negative': sum(1 for word in financial_keywords['negative'] if word in text_lower),
-                'neutral': sum(1 for word in financial_keywords['neutral'] if word in text_lower)
+                'positive': sum(1 for word in financial_keywords.get('positive', []) if word in text_lower),
+                'negative': sum(1 for word in financial_keywords.get('negative', []) if word in text_lower),
+                'neutral': sum(1 for word in financial_keywords.get('neutral', []) if word in text_lower)
             }
             
             # Calculate keyword-adjusted sentiment
@@ -318,6 +318,11 @@ class EnhancedFinancialCrawler:
     def store_article_with_sentiment(self, article_data):
         """Store article and its sentiment analysis in the data warehouse"""
         try:
+            # Check if article_data is valid
+            if not article_data:
+                logger.warning("Article data is None or empty, skipping")
+                return None
+                
             # Check for duplicates first
             article_url = article_data.get('url', '')
             if article_url and self.data_warehouse.article_exists_by_url(article_url):
@@ -352,7 +357,7 @@ class EnhancedFinancialCrawler:
                     'negative_score': sentiment_result.get('vader_scores', {}).get('neg', 0.0),
                     'neutral_score': sentiment_result.get('vader_scores', {}).get('neu', 0.0),
                     'compound_score': sentiment_result.get('vader_scores', {}).get('compound', 0.0),
-                    'keywords': list(sentiment_result.get('keyword_scores', {}).keys()),
+                    'keywords': list(sentiment_result.get('keyword_scores', {}).keys()) if sentiment_result.get('keyword_scores') else [],
                     'analysis_method': sentiment_result.get('analysis_method', 'enhanced')
                 }
                 
@@ -427,7 +432,10 @@ class EnhancedFinancialCrawler:
             if len(all_articles) < 3:  # Only use manual news if we have less than 3 real articles
                 logger.info(f"Only {len(all_articles)} real articles found, adding manual news as fallback")
                 manual_news = self.get_manual_news_enhanced(keywords)
-                all_articles.extend(manual_news)
+                if manual_news:
+                    all_articles.extend(manual_news)
+                else:
+                    logger.warning("No manual news returned from scraping")
             else:
                 logger.info(f"Found {len(all_articles)} real articles, skipping manual news fallback")
             
@@ -436,13 +444,17 @@ class EnhancedFinancialCrawler:
             for article in all_articles:
                 try:
                     enhanced_article = self.store_article_with_sentiment(article)
-                    enhanced_articles.append(enhanced_article)
+                    if enhanced_article:  # Only append if enhancement was successful
+                        enhanced_articles.append(enhanced_article)
+                    else:
+                        # If article was skipped (already exists), append original article
+                        enhanced_articles.append(article)
                 except Exception as e:
                     logger.error(f"Error enhancing article: {str(e)}")
                     enhanced_articles.append(article)
             
             # Sort by sentiment confidence and limit results
-            enhanced_articles.sort(key=lambda x: x.get('sentiment', {}).get('confidence', 0) if isinstance(x.get('sentiment'), dict) else 0, reverse=True)
+            enhanced_articles.sort(key=lambda x: x.get('sentiment', {}).get('confidence', 0) if x and isinstance(x.get('sentiment'), dict) else 0, reverse=True)
             
             return {
                 'source': 'enhanced_crawler',
@@ -504,8 +516,9 @@ class EnhancedFinancialCrawler:
                             for article in articles:
                                 try:
                                     enhanced_article = self.store_article_with_sentiment(article)
-                                    # Update the article with enhanced data
-                                    article.update(enhanced_article)
+                                    # Update the article with enhanced data if enhancement was successful
+                                    if enhanced_article:
+                                        article.update(enhanced_article)
                                 except Exception as e:
                                     logger.error(f"Error enhancing NewsAPI article: {str(e)}")
                             
@@ -531,16 +544,22 @@ class EnhancedFinancialCrawler:
             # Scrape CoinDesk for real news articles
             try:
                 coindesk_articles = self.scrape_coindesk_news(keywords)
-                real_articles.extend(coindesk_articles)
-                logger.info(f"Scraped {len(coindesk_articles)} articles from CoinDesk")
+                if coindesk_articles:
+                    real_articles.extend(coindesk_articles)
+                    logger.info(f"Scraped {len(coindesk_articles)} articles from CoinDesk")
+                else:
+                    logger.warning("No articles returned from CoinDesk scraping")
             except Exception as e:
                 logger.error(f"Error scraping CoinDesk: {str(e)}")
             
             # Scrape CoinTelegraph for real news articles
             try:
                 cointelegraph_articles = self.scrape_cointelegraph_news(keywords)
-                real_articles.extend(cointelegraph_articles)
-                logger.info(f"Scraped {len(cointelegraph_articles)} articles from CoinTelegraph")
+                if cointelegraph_articles:
+                    real_articles.extend(cointelegraph_articles)
+                    logger.info(f"Scraped {len(cointelegraph_articles)} articles from CoinTelegraph")
+                else:
+                    logger.warning("No articles returned from CoinTelegraph scraping")
             except Exception as e:
                 logger.error(f"Error scraping CoinTelegraph: {str(e)}")
             

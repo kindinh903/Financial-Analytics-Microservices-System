@@ -85,7 +85,10 @@ def auto_crawl_job():
     try:
         logger.info("Starting auto-crawl job for all symbols")
         
-        # Use asyncio.run for proper event loop handling
+        # Create a new event loop for the background job
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
         async def crawl_all_symbols():
             tasks = []
             for symbol in auto_crawling_symbols:
@@ -103,8 +106,9 @@ def auto_crawl_job():
                 else:
                     logger.info(f"Successfully auto-crawled {symbol}")
         
-        # Run the async function
-        asyncio.run(crawl_all_symbols())
+        # Run the async function in the new event loop
+        loop.run_until_complete(crawl_all_symbols())
+        loop.close()
         logger.info("Auto-crawl job completed")
         
     except Exception as e:

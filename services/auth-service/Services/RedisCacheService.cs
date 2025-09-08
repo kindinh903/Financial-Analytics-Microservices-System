@@ -27,7 +27,7 @@ namespace AuthService.Services
             return JsonSerializer.Deserialize<T>(value!);
         }
 
-        public async Task SetAsync<T>(string key, T value, int expireSeconds = 3600)
+        public async Task SetAsync<T>(string key, T value, int expireSeconds = 60)
         {
             var json = JsonSerializer.Serialize(value);
             await _db.StringSetAsync(key, json, TimeSpan.FromSeconds(expireSeconds));
