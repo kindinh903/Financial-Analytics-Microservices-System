@@ -234,6 +234,10 @@ export const crawlerService = {
   exportSentimentCSV: (symbol, days = 30) =>
     api.get(`/api/crawler/data/export/csv/${symbol}`, { params: { days } }),
 
+  // Read from CSV
+  readFromCSV: (symbol, limit = 50) =>
+    api.get(`/api/crawler/data/read/csv/${symbol}`, { params: { limit } }),
+
   // Get warehouse stats
   getWarehouseStats: () =>
     api.get('/api/crawler/data/warehouse/stats'),

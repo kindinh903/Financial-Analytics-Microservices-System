@@ -22,9 +22,8 @@ const Header = () => {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/charts', label: 'Charts', icon: '📈' },
-    { path: '/portfolio', label: 'Portfolio', icon: '💼' },
     { path: '/news', label: 'News', icon: '📰' },
     { path: '/backtest', label: 'Backtest', icon: '🔬' },
   ];
@@ -39,7 +38,7 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link to="/dashboard" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                 <span className="text-white text-lg font-bold">F</span>
               </div>

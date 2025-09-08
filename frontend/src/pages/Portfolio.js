@@ -68,9 +68,9 @@ const Portfolio = () => {
     },
   ];
 
-  const totalValue = portfolio.reduce((sum, item) => sum + item.value, 0);
-  const totalChange = portfolio.reduce((sum, item) => sum + (item.change * item.value / 100), 0);
-  const totalChangePercent = (totalChange / totalValue) * 100;
+  const totalValue = Array.isArray(portfolio) ? portfolio.reduce((sum, item) => sum + item.value, 0) : 0;
+  const totalChange = Array.isArray(portfolio) ? portfolio.reduce((sum, item) => sum + (item.change * item.value / 100), 0) : 0;
+  const totalChangePercent = totalValue > 0 ? (totalChange / totalValue) * 100 : 0;
 
   if (loading) {
     return (
@@ -107,7 +107,7 @@ const Portfolio = () => {
         
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-sm font-medium text-gray-500">Holdings</h3>
-          <p className="text-3xl font-bold text-gray-900">{portfolio.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{Array.isArray(portfolio) ? portfolio.length : 0}</p>
           <p className="text-sm text-gray-500">Assets</p>
         </div>
       </div>
@@ -146,7 +146,7 @@ const Portfolio = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {portfolio.map((item) => (
+              {Array.isArray(portfolio) ? portfolio.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -182,7 +182,13 @@ const Portfolio = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                    No portfolio data available
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
