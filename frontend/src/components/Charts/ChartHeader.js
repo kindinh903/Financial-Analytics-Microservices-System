@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, TrendingUp } from 'lucide-react';
+import { X, TrendingUp, Wifi, WifiOff } from 'lucide-react';
 
 const ChartHeader = ({ 
   chartConfig, 
@@ -11,7 +11,8 @@ const ChartHeader = ({
   priceChange,
   priceChangePercent,
   onShowIndicatorSelector,
-  onRemoveIndicator
+  onRemoveIndicator,
+  isConnected = false
 }) => {
   return (
     <div className="flex items-center justify-between p-3 border-b bg-gray-50">
@@ -61,6 +62,21 @@ const ChartHeader = ({
         {error && (
           <span className="text-xs text-red-500">Error: {error}</span>
         )}
+
+        {/* WebSocket Connection Status */}
+        <div className="flex items-center space-x-1">
+          {isConnected ? (
+            <>
+              <Wifi className="w-4 h-4 text-green-500" />
+              <span className="text-xs text-green-600">Live</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4 text-red-500" />
+              <span className="text-xs text-red-600">Offline</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Middle - Indicators */}

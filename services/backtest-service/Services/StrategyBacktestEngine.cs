@@ -57,6 +57,7 @@ namespace BacktestService.Services
             var result = new BacktestResult
             {
                 Id = Guid.NewGuid(),
+                UserId = request.UserId ?? string.Empty,
                 Symbol = request.Symbol,
                 Interval = request.Interval,
                 StartDate = request.StartDate,

@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout to 30 seconds for crawler operations
   headers: {
     'Content-Type': 'application/json',
   },
@@ -48,6 +48,7 @@ export const healthCheck = {
   price: () => api.get('/api/price/health'),
   news: () => api.get('/api/news/health'),
   user: () => api.get('/api/user/health'),
+  crawler: () => api.get('/health/crawler'),
 };
 
 // Price service endpoints
@@ -125,6 +126,31 @@ export const userService = {
   // ✅ Thêm endpoint cập nhật address
   updateAddress: (address) =>
     api.put('/api/user/address', address),
+
+  // Admin endpoints
+  getAllUsers: () =>
+    api.get('/api/user/admin/users'),
+
+  getUserById: (userId) =>
+    api.get(`/api/user/admin/users/${userId}`),
+
+  updateUser: (userId, userData) =>
+    api.put(`/api/user/admin/users/${userId}`, userData),
+
+  createUser: (userData) =>
+    api.post('/api/user/admin/users', userData),
+
+  deleteUser: (userId) =>
+    api.delete(`/api/user/admin/users/${userId}`),
+
+  getAdminStats: () =>
+    api.get('/api/user/admin/stats'),
+
+  getSystemLogs: (params = {}) =>
+    api.get('/api/user/admin/logs', { params }),
+
+  updateSystemSettings: (settings) =>
+    api.put('/api/user/admin/settings', settings),
 };
 
 // News service endpoints
@@ -168,6 +194,49 @@ export const backtestService = {
   // Get backtest statistics summary
   getBacktestStats: (params = {}) =>
     api.get('/api/backtest/stats', { params }),
+};
+
+// Crawler service endpoints
+export const crawlerService = {
+  // Enhanced crawl
+  enhancedCrawl: (data) =>
+    api.post('/api/crawler/crawl/enhanced', data),
+
+  // Get trending headlines
+  getTrending: (forceRefresh = false) =>
+    api.get('/api/crawler/trending', { params: { force_refresh: forceRefresh } }),
+
+  // Get latest news
+  getLatestNews: (symbol = 'BTCUSDT', limit = 20) =>
+    api.get('/api/crawler/news/latest', { params: { symbol, limit } }),
+
+  // Get enhanced news
+  getEnhancedNews: (symbol = 'BTCUSDT', limit = 20) =>
+    api.get('/api/crawler/news/enhanced', { params: { symbol, limit } }),
+
+  // Get stored news (no crawling)
+  getStoredNews: (symbol = 'BTCUSDT', limit = 50) =>
+    api.get('/api/crawler/news/stored', { params: { symbol, limit } }),
+
+  // Analyze sentiment
+  analyzeSentiment: (text) =>
+    api.get('/api/crawler/sentiment/analyze', { params: { text } }),
+
+  // Get news sources
+  getNewsSources: () =>
+    api.get('/api/crawler/news/sources'),
+
+  // Get sentiment summary
+  getSentimentSummary: (symbol, days = 7) =>
+    api.get(`/api/crawler/data/sentiment/summary/${symbol}`, { params: { days } }),
+
+  // Export CSV
+  exportSentimentCSV: (symbol, days = 30) =>
+    api.get(`/api/crawler/data/export/csv/${symbol}`, { params: { days } }),
+
+  // Get warehouse stats
+  getWarehouseStats: () =>
+    api.get('/api/crawler/data/warehouse/stats'),
 };
 
 export default api;

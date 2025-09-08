@@ -1,6 +1,20 @@
 // Middleware to extract user context from headers set by the Gateway
 const authenticateToken = async (req, res, next) => {
   try {
+    // // TEMPORARY: Allow admin test routes to bypass auth for testing
+    // console.log('Request path:', req.path, 'URL:', req.url, 'Original URL:', req.originalUrl);
+    // if (req.path.includes('/admin/test') || req.path.includes('/admin/users') || req.path.includes('/admin/stats')) {
+    //   console.log('Bypassing auth for admin test route:', req.path);
+    //   req.user = {
+    //     authUserId: 'test-admin',
+    //     role: 'admin',
+    //     email: 'admin@example.com',
+    //     firstName: 'Admin',
+    //     lastName: 'User'
+    //   };
+    //   return next();
+    // }
+
     const userId = req.header('x-user-id');
     const role = req.header('x-user-role');
     const email = req.header('x-user-email');

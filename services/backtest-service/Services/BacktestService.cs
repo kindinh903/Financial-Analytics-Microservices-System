@@ -56,12 +56,18 @@ namespace BacktestService.Services
             string? symbol = null, 
             string? interval = null, 
             DateTime? startDate = null, 
-            DateTime? endDate = null)
+            DateTime? endDate = null,
+            string? userId = null)
         {
             var query = _context.BacktestResults
                 .Include(r => r.Trades)
                 .Include(r => r.PerformanceHistory)
                 .AsQueryable();
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                query = query.Where(r => r.UserId == userId);
+            }
 
             if (!string.IsNullOrEmpty(symbol))
             {

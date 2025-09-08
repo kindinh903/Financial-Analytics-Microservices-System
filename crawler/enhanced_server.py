@@ -10,6 +10,10 @@ from simple_sentiment_analyzer import SimpleSentimentAnalyzer
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
+import threading
+import time
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -17,17 +21,25 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Enhanced Financial Data Crawler API", version="2.0.0")
 
-# Allow calls from any frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS disabled - handled by gateway
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 # Initialize enhanced crawler
 enhanced_crawler = EnhancedFinancialCrawler()
+
+# Initialize background scheduler for auto-crawling
+scheduler = BackgroundScheduler()
+
+# Track auto-crawling status
+auto_crawling_active = False
+auto_crawling_symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT', 'DOTUSDT']  # Default symbols to track
+auto_crawling_interval = 1800  # 30 minutes default interval to prevent NewsAPI rate limiting
 
 class EnhancedCrawlRequest(BaseModel):
     symbol: str
@@ -37,6 +49,119 @@ class EnhancedCrawlRequest(BaseModel):
 
 class TrendingRequest(BaseModel):
     force_refresh: Optional[bool] = False
+
+class AutoCrawlConfig(BaseModel):
+    symbols: List[str]
+    interval_seconds: int = 300  # 5 minutes default
+    enable: bool = True
+
+async def auto_crawl_news_for_symbol(symbol: str):
+    """Auto-crawl news for a specific symbol"""
+    try:
+        logger.info(f"Auto-crawling news for {symbol}")
+        
+        # Crawl news for the symbol
+        keywords = [symbol.replace('USDT', ''), 'cryptocurrency', 'trading']
+        news_data = await enhanced_crawler.crawl_multiple_sources_async(keywords, max_articles=10)
+        
+        if news_data and news_data.get('articles'):
+            # Store articles in data warehouse
+            for article in news_data['articles']:
+                try:
+                    enhanced_article = enhanced_crawler.store_article_with_sentiment(article)
+                    logger.info(f"Auto-stored news article for {symbol}: {article.get('title', 'Unknown')[:50]}...")
+                except Exception as e:
+                    logger.error(f"Error storing auto-crawled article for {symbol}: {str(e)}")
+            
+            logger.info(f"Auto-crawled {len(news_data['articles'])} articles for {symbol}")
+        else:
+            logger.warning(f"No articles found in auto-crawl for {symbol}")
+            
+    except Exception as e:
+        logger.error(f"Error in auto-crawl for {symbol}: {str(e)}")
+
+def auto_crawl_job():
+    """Background job to auto-crawl news for all tracked symbols"""
+    try:
+        logger.info("Starting auto-crawl job for all symbols")
+        
+        # Create a new event loop for the background job
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        async def crawl_all_symbols():
+            tasks = []
+            for symbol in auto_crawling_symbols:
+                task = auto_crawl_news_for_symbol(symbol)
+                tasks.append(task)
+            
+            # Run all crawling tasks concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Log results
+            for i, result in enumerate(results):
+                symbol = auto_crawling_symbols[i]
+                if isinstance(result, Exception):
+                    logger.error(f"Error auto-crawling {symbol}: {str(result)}")
+                else:
+                    logger.info(f"Successfully auto-crawled {symbol}")
+        
+        # Run the async function in the new event loop
+        loop.run_until_complete(crawl_all_symbols())
+        loop.close()
+        logger.info("Auto-crawl job completed")
+        
+    except Exception as e:
+        logger.error(f"Error in auto-crawl job: {str(e)}")
+
+def start_auto_crawling():
+    """Start the auto-crawling scheduler"""
+    global auto_crawling_active
+    
+    if not auto_crawling_active:
+        try:
+            # Add job to scheduler
+            scheduler.add_job(
+                func=auto_crawl_job,
+                trigger=IntervalTrigger(seconds=auto_crawling_interval),
+                id='auto_crawl_news',
+                name='Auto-crawl financial news',
+                replace_existing=True
+            )
+            
+            # Start scheduler
+            scheduler.start()
+            auto_crawling_active = True
+            logger.info(f"Auto-crawling started with {auto_crawling_interval}s interval for symbols: {auto_crawling_symbols}")
+            
+        except Exception as e:
+            logger.error(f"Error starting auto-crawling: {str(e)}")
+
+def stop_auto_crawling():
+    """Stop the auto-crawling scheduler"""
+    global auto_crawling_active
+    
+    if auto_crawling_active:
+        try:
+            scheduler.shutdown()
+            auto_crawling_active = False
+            logger.info("Auto-crawling stopped")
+        except Exception as e:
+            logger.error(f"Error stopping auto-crawling: {str(e)}")
+
+def update_auto_crawling_config(symbols: List[str], interval_seconds: int):
+    """Update auto-crawling configuration"""
+    global auto_crawling_symbols, auto_crawling_interval
+    
+    auto_crawling_symbols = symbols
+    auto_crawling_interval = interval_seconds
+    
+    # Restart scheduler with new config
+    if auto_crawling_active:
+        stop_auto_crawling()
+        start_auto_crawling()
+    
+    logger.info(f"Auto-crawling config updated: symbols={symbols}, interval={interval_seconds}s")
 
 @app.post("/crawl/enhanced")
 async def enhanced_crawl(req: EnhancedCrawlRequest):
@@ -183,6 +308,48 @@ async def get_enhanced_news(symbol: str = "BTCUSDT", limit: int = 20):
     except Exception as e:
         logger.error(f"Enhanced news error: {str(e)}")
         return {"status": "error", "error": str(e)}
+
+@app.get("/news/stored")
+async def get_stored_news(symbol: str = "BTCUSDT", limit: int = 50):
+    """Get stored news from SQLite database without triggering new crawl"""
+    try:
+        # Get stored articles from SQLite database
+        stored_articles = enhanced_crawler.data_warehouse.get_recent_articles(limit=limit)
+        
+        if not stored_articles:
+            return {
+                "status": "success",
+                "news_data": {"articles": []},
+                "message": "No stored articles found",
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # Format the stored articles
+        formatted_articles = []
+        for article in stored_articles:
+            formatted_article = {
+                "title": article.get('title', ''),
+                "description": article.get('title', ''),  # Use title as description for now
+                "url": article.get('url', ''),
+                "source": article.get('source', ''),
+                "published_at": article.get('published_at', ''),
+                "sentiment": article.get('sentiment', 'neutral'),
+                "confidence": article.get('confidence', 0.5),
+                "keywords": article.get('keywords', ''),
+                "score": article.get('score', 0.0)
+            }
+            formatted_articles.append(formatted_article)
+        
+        return {
+            "status": "success",
+            "news_data": {"articles": formatted_articles},
+            "count": len(formatted_articles),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Stored news error: {str(e)}")
+        return {"error": str(e), "news_data": {"articles": []}}
 
 @app.get("/news/sources")
 async def get_news_sources():
@@ -392,6 +559,115 @@ async def get_warehouse_stats():
             "timestamp": datetime.now().isoformat()
         }
 
+# Auto-crawling control endpoints
+@app.post("/auto-crawl/start")
+async def start_auto_crawl():
+    """Start automatic news crawling"""
+    try:
+        start_auto_crawling()
+        return {
+            "status": "success",
+            "message": "Auto-crawling started",
+            "symbols": auto_crawling_symbols,
+            "interval_seconds": auto_crawling_interval,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error starting auto-crawl: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.post("/auto-crawl/stop")
+async def stop_auto_crawl():
+    """Stop automatic news crawling"""
+    try:
+        stop_auto_crawling()
+        return {
+            "status": "success",
+            "message": "Auto-crawling stopped",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error stopping auto-crawl: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/auto-crawl/status")
+async def get_auto_crawl_status():
+    """Get auto-crawling status"""
+    try:
+        return {
+            "status": "success",
+            "active": auto_crawling_active,
+            "symbols": auto_crawling_symbols,
+            "interval_seconds": auto_crawling_interval,
+            "next_run": "N/A" if not auto_crawling_active else "Scheduled",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting auto-crawl status: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.post("/auto-crawl/config")
+async def update_auto_crawl_config(config: AutoCrawlConfig):
+    """Update auto-crawling configuration"""
+    try:
+        update_auto_crawling_config(config.symbols, config.interval_seconds)
+        
+        if config.enable and not auto_crawling_active:
+            start_auto_crawling()
+        elif not config.enable and auto_crawling_active:
+            stop_auto_crawling()
+        
+        return {
+            "status": "success",
+            "message": "Auto-crawling configuration updated",
+            "symbols": auto_crawling_symbols,
+            "interval_seconds": auto_crawling_interval,
+            "active": auto_crawling_active,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error updating auto-crawl config: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.post("/auto-crawl/trigger")
+async def trigger_auto_crawl():
+    """Manually trigger auto-crawl for all symbols"""
+    try:
+        logger.info("Manually triggering auto-crawl")
+        
+        # Run auto-crawl job immediately
+        auto_crawl_job()
+        
+        return {
+            "status": "success",
+            "message": "Auto-crawl triggered successfully",
+            "symbols": auto_crawling_symbols,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error triggering auto-crawl: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
 # Background task to update trending topics
 @app.on_event("startup")
 async def startup_event():
@@ -400,10 +676,23 @@ async def startup_event():
         logger.info("Initializing enhanced crawler...")
         # Pre-populate trending topics
         enhanced_crawler.get_trending_headlines(force_refresh=True)
+        
+        # Start auto-crawling by default
+        start_auto_crawling()
+        
         logger.info("Enhanced crawler initialized successfully")
     except Exception as e:
         logger.error(f"Startup error: {str(e)}")
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    try:
+        stop_auto_crawling()
+        logger.info("Enhanced crawler shutdown complete")
+    except Exception as e:
+        logger.error(f"Shutdown error: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

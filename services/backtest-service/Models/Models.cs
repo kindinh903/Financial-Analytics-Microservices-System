@@ -27,11 +27,14 @@ namespace BacktestService.Models
         public decimal StopLoss { get; set; } = 0.05m;
         
         public decimal TakeProfit { get; set; } = 0.1m;
+        
+        public string? UserId { get; set; }
     }
 
     public class BacktestResult
     {
         public Guid Id { get; set; }
+        public string UserId { get; set; } = string.Empty;
         public string Symbol { get; set; } = string.Empty;
         public string Interval { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
