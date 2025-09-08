@@ -127,6 +127,31 @@ spring:
             - Path=/api/crawler/**
           filters:
             - RewritePath=/api/crawler/(?<segment>.*), /${segment}
+        - id: ai-predict-health
+          uri: http://ai-predict-service:8084
+          predicates:
+            - Path=/api/ai-predict/health
+          filters:
+            - RewritePath=/api/ai-predict/health, /health
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: '#{@ipKeyResolver}'
+        - id: ai-predict-service
+          uri: http://ai-predict-service:8084
+          predicates:
+            - Path=/api/ai-predict/**
+          filters:
+            - RewritePath=/api/ai-predict/(?<segment>.*), /${segment}
+            - name: AuthenticationFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: '#{@ipKeyResolver}'
 management:
   endpoints:
     web:

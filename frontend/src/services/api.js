@@ -197,6 +197,17 @@ export const backtestService = {
     api.get('/api/backtest/stats', { params }),
 };
 
+// AI Predict service endpoints
+export const aiPredictService = {
+  // Get AI price prediction
+  predictPrice: (data) =>
+    api.post('/api/ai-predict/predict', data),
+
+  // Health check
+  health: () =>
+    api.get('/api/ai-predict/health'),
+};
+
 // Crawler service endpoints
 export const crawlerService = {
   // Enhanced crawl

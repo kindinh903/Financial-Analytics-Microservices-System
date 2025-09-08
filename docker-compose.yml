@@ -200,6 +200,7 @@ services:
       - price-service
       - user-service
       - crawler
+      - ai-predict-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
