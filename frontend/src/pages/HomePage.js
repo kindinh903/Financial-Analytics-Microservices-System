@@ -1,8 +1,8 @@
-import React from 'react';
-import Header from '../components/Layout/Header';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import MultiChartDashboard from '../components/Charts/MultiChartDashboard';
 import { predictService, priceService } from '../services/api';
-
+import Header from '../components/Layout/Header';
 
 
 
@@ -68,9 +68,33 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header - Section 1 */}
+      <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="text-red-600 font-bold text-lg">📊 Trading Platform</div>
+          <nav className="flex gap-6 text-sm">
+            <Link to="/" className="text-blue-600 hover:text-blue-800 font-medium">Giao dịch</Link>
+            <Link to="/dashboard" className="text-gray-600 hover:text-gray-800">Trang chủ</Link>
+            <Link to="/charts" className="text-gray-600 hover:text-gray-800">Biểu đồ</Link>
+            <Link to="/portfolio" className="text-gray-600 hover:text-gray-800">Danh mục</Link>
+            <Link to="/news" className="text-gray-600 hover:text-gray-800">Tin tức</Link>
+          </nav>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xl cursor-pointer hover:scale-110 transition-transform">🔔</span>
+          <span className="text-xl cursor-pointer hover:scale-110 transition-transform">⚙️</span>
+          <span
+            className="text-xl cursor-pointer hover:scale-110 transition-transform"
+            title="Profile"
+            onClick={handleProfileClick}
+          >
+            👤
+          </span>
+        </div>
+      </div>
+
+      <div className="flex" style={{ height: 'calc(100vh - 60px)' }}>
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Chart Section - Section 3 */}
