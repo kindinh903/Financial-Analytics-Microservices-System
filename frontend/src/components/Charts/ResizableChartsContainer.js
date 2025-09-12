@@ -274,6 +274,55 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
           pointer-events: auto !important;
         }
         
+        /* All buttons in chart should be clickable */
+        .react-grid-item button {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 1000;
+          position: relative;
+        }
+        
+        /* Chart header buttons should be fully interactive */
+        .react-grid-item .chart-header button {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 1001;
+        }
+        
+        /* Ensure all interactive elements work */
+        .react-grid-item select,
+        .react-grid-item input,
+        .react-grid-item textarea {
+          pointer-events: auto !important;
+          cursor: auto !important;
+          z-index: 1000;
+        }
+        
+        /* Prevent event conflicts on buttons */
+        .react-grid-item button:hover,
+        .react-grid-item button:focus,
+        .react-grid-item button:active {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 1002;
+        }
+        
+        /* Specifically for chart header controls */
+        .chart-header button,
+        .chart-header select,
+        .chart-header input {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 1001 !important;
+          position: relative !important;
+        }
+        
+        /* Fix for any interference with drag handle */
+        .drag-handle button:not(.remove-chart-btn) {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+        }
+        
         /* Remove button styling */
         .react-grid-item .drag-handle button {
           position: relative;
@@ -293,6 +342,40 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
         
         .react-grid-item .drag-handle button:hover {
           background-color: rgba(239, 68, 68, 0.1);
+        }
+        
+        /* Modal and overlay fixes */
+        .fixed[style*="z-index: 9999"] {
+          pointer-events: auto !important;
+        }
+        
+        .fixed[style*="z-index: 9999"] * {
+          pointer-events: auto !important;
+        }
+        
+        /* Ensure modals work properly */
+        div[style*="z-index: 10000"] {
+          pointer-events: auto !important;
+        }
+        
+        div[style*="z-index: 10000"] * {
+          pointer-events: auto !important;
+          cursor: auto !important;
+        }
+        
+        div[style*="z-index: 10000"] button {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+        }
+        
+        div[style*="z-index: 10000"] select {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+        }
+        
+        div[style*="z-index: 10000"] input {
+          pointer-events: auto !important;
+          cursor: text !important;
         }
       `}</style>
     </div>

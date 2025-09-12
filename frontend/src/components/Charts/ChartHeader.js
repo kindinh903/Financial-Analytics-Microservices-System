@@ -84,7 +84,7 @@ const ChartHeader = ({
     }
   };
   return (
-    <div className="flex items-center justify-between p-2 border-b bg-gray-50">
+    <div className="chart-header flex items-center justify-between p-2 border-b bg-gray-50">
       {/* Left side - Price info and status */}
       <div className="flex items-center space-x-3">
         {currentPrice > 0 && (
@@ -139,8 +139,14 @@ const ChartHeader = ({
               {indicator.type === 'BOLL' ? `, ${indicator.stdDev}` : ''})
             </span>
             <button
-              onClick={() => onRemoveIndicator && onRemoveIndicator(indicator.id)}
-              className="text-gray-400 hover:text-red-500 ml-1 text-xs"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemoveIndicator && onRemoveIndicator(indicator.id);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="text-gray-400 hover:text-red-500 ml-1 text-xs pointer-events-auto cursor-pointer"
+              style={{ zIndex: 1001 }}
               title="Remove indicator"
             >
               ×
@@ -149,8 +155,14 @@ const ChartHeader = ({
         ))}
         
         <button
-          onClick={onShowIndicatorSelector}
-          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onShowIndicatorSelector();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto cursor-pointer"
+          style={{ zIndex: 1001 }}
         >
           + Indicator
         </button>
@@ -158,9 +170,15 @@ const ChartHeader = ({
         {/* AI Prediction Section */}
         <div className="flex items-center space-x-2 ml-3">
           <button
-            onClick={handleAIPrediction}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAIPrediction();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
             disabled={predictionLoading}
-            className="flex items-center space-x-1 px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-1 px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
+            style={{ zIndex: 1001 }}
           >
             <Brain className="w-3 h-3" />
             <span>{predictionLoading ? 'Predicting...' : 'AI Predict'}</span>

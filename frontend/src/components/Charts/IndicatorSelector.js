@@ -57,19 +57,46 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ zIndex: 9999 }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+        onClick={(e) => e.stopPropagation()}
+        style={{ zIndex: 10000, pointerEvents: 'auto' }}
+      >
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-lg font-semibold text-gray-900">Add Indicator</h3>
           <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl font-semibold"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="text-gray-400 hover:text-gray-600 text-xl font-semibold pointer-events-auto"
+            style={{ zIndex: 10001, cursor: 'pointer' }}
           >
             ×
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSubmit(e);
+          }} 
+          className="p-4 space-y-4"
+          style={{ pointerEvents: 'auto' }}
+        >
           {/* Indicator Type Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -77,8 +104,13 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
             </label>
             <select
               value={selectedIndicator}
-              onChange={(e) => handleIndicatorChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                e.stopPropagation();
+                handleIndicatorChange(e.target.value);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+              style={{ zIndex: 10001, cursor: 'pointer' }}
               required
             >
               <option value="">Select an indicator</option>
@@ -99,10 +131,15 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
               <input
                 type="number"
                 value={period}
-                onChange={(e) => setPeriod(e.target.value)}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setPeriod(e.target.value);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
                 min="1"
                 max="200"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                style={{ zIndex: 10001, cursor: 'text' }}
                 required
               />
             </div>
@@ -117,11 +154,16 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
               <input
                 type="number"
                 value={stdDev}
-                onChange={(e) => setStdDev(e.target.value)}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setStdDev(e.target.value);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
                 min="0.1"
                 max="5"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                style={{ zIndex: 10001, cursor: 'text' }}
                 required
               />
             </div>
@@ -138,11 +180,20 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
                   <button
                     key={colorOption.value}
                     type="button"
-                    onClick={() => setColor(colorOption.value)}
-                    className={`w-full h-8 rounded border-2 ${
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setColor(colorOption.value);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`w-full h-8 rounded border-2 pointer-events-auto ${
                       color === colorOption.value ? 'border-gray-900' : 'border-gray-300'
                     }`}
-                    style={{ backgroundColor: colorOption.value }}
+                    style={{ 
+                      backgroundColor: colorOption.value,
+                      zIndex: 10001,
+                      cursor: 'pointer'
+                    }}
                     title={colorOption.label}
                   />
                 ))}
@@ -161,15 +212,27 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+              style={{ zIndex: 10001, cursor: 'pointer' }}
             >
               Cancel
             </button>
             <button
               type="submit"
+              onClick={(e) => {
+                e.stopPropagation();
+                // handleSubmit will be called by form onSubmit
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
               disabled={!selectedIndicator || isIndicatorExists(selectedIndicator, period)}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
+              style={{ zIndex: 10001, cursor: selectedIndicator && !isIndicatorExists(selectedIndicator, period) ? 'pointer' : 'not-allowed' }}
             >
               Add Indicator
             </button>

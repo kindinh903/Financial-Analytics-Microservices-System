@@ -13,8 +13,7 @@ const MultiChartDashboard = () => {
       symbol: 'BTCUSDT', 
       timeframe: '5m',
       indicators: [
-        { type: 'SMA', period: 20, color: '#2196F3' },
-        { type: 'EMA', period: 50, color: '#FF9800' }
+        { type: 'SMA', period: 20, color: '#2196F3' }
       ]
     },
     { 
