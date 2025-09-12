@@ -69,7 +69,8 @@ const Header = () => {
               🔔
             </button>
             
-            {user && (
+            {user ? (
+              // Đã đăng nhập - hiển thị profile và logout
               <div className="flex items-center space-x-3">
                 <Link 
                   to="/profile" 
@@ -97,6 +98,22 @@ const Header = () => {
                   Logout
                 </button>
               </div>
+            ) : (
+              // Chưa đăng nhập - hiển thị nút login/register
+              <div className="flex items-center space-x-3">
+                <Link 
+                  to="/login"
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/register"
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md"
+                >
+                  Register
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -105,4 +122,4 @@ const Header = () => {
   );
 };
 
-export default Header; 
+export default Header;

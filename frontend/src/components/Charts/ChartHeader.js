@@ -134,7 +134,7 @@ const ChartHeader = ({
 
         {/* WebSocket Connection Status */}
         <div className="flex items-center space-x-1">
-          {isConnected ? (
+          {!isLoading ? (
             <>
               <Wifi className="w-4 h-4 text-green-500" />
               <span className="text-xs text-green-600">Live</span>

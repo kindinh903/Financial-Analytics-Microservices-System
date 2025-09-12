@@ -570,12 +570,7 @@ const Backtest = () => {
 
               {/* Action Buttons */}
               <div className="flex space-x-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Config Strategy
-                </button>
+                
               </div>
             </div>
           </div>

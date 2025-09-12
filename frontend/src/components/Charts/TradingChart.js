@@ -74,7 +74,6 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
   // Handle WebSocket errors
   const handleWebSocketError = useCallback((error) => {
     console.error(`❌ WebSocket error for ${chartConfig.symbol}:`, error);
-    setError('WebSocket connection error');
   }, [chartConfig.symbol]);
 
   // Use WebSocket hook
