@@ -100,12 +100,12 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
 
   return (
     <div className="p-4">
-      <div className="mb-4 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+      <div className="mb-3 text-xs text-gray-600 bg-blue-50 p-2 rounded-lg border border-blue-200">
         <div className="flex items-center gap-2">
-          <span className="text-blue-600">💡</span>
+          <span className="text-blue-600 text-sm">💡</span>
           <div>
-            <strong>Hướng dẫn sử dụng:</strong>
-            <ul className="mt-1 space-y-1">
+            <strong className="text-xs">Hướng dẫn sử dụng:</strong>
+            <ul className="mt-1 space-y-0.5 text-xs">
               <li>• <strong>Kéo thả:</strong> Click và kéo ở thanh header (có icon ⋮⋮)</li>
               <li>• <strong>Tương tác biểu đồ:</strong> Click và drag trong vùng biểu đồ</li>
               <li>• <strong>Thay đổi kích thước:</strong> Kéo góc dưới phải</li>
@@ -207,7 +207,7 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
         /* Custom drag handle - ONLY this area can be dragged */
         .react-grid-item .drag-handle {
           cursor: move;
-          padding: 8px;
+          padding: 6px 8px;
           background: #f8f9fa;
           border-bottom: 1px solid #e9ecef;
           display: flex;
@@ -216,6 +216,7 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
           position: relative;
           z-index: 10;
           user-select: none;
+          font-size: 12px;
         }
         
         .react-grid-item .drag-handle:hover {
@@ -230,9 +231,22 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
           content: "⋮⋮";
           color: #6c757d;
           font-weight: bold;
-          font-size: 14px;
-          letter-spacing: 2px;
-          margin-right: 8px;
+          font-size: 12px;
+          letter-spacing: 1px;
+          margin-right: 6px;
+        }
+        
+        /* Select boxes should not trigger drag */
+        .react-grid-item .drag-handle select {
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 1001;
+          position: relative;
+        }
+        
+        .react-grid-item .drag-handle select:focus {
+          outline: 2px solid #3b82f6;
+          outline-offset: 1px;
         }
         
         /* Chart container should allow ALL interactions */
@@ -266,13 +280,15 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
           z-index: 1000;
           pointer-events: auto !important;
           cursor: pointer !important;
-          padding: 4px;
+          padding: 2px 4px;
           border-radius: 3px;
           display: flex;
           align-items: center;
           justify-content: center;
-          min-width: 20px;
-          height: 20px;
+          min-width: 16px;
+          height: 16px;
+          font-size: 12px;
+          line-height: 1;
         }
         
         .react-grid-item .drag-handle button:hover {

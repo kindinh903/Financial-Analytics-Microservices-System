@@ -536,11 +536,42 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
       {/* Drag Handle - ONLY this area can drag the chart */}
       <div className="drag-handle">
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm font-medium text-gray-700 select-none">
-            {chartConfig.symbol} - {chartConfig.timeframe}
-          </span>
+          <select 
+            value={chartConfig.symbol} 
+            onChange={(e) => {
+              e.stopPropagation();
+              onConfigChange({...chartConfig, symbol: e.target.value});
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="px-1 py-0.5 border rounded text-xs bg-white"
+          >
+            <option value="BTCUSDT">BTC/USDT</option>
+            <option value="ETHUSDT">ETH/USDT</option>
+            <option value="ADAUSDT">ADA/USDT</option>
+            <option value="BNBUSDT">BNB/USDT</option>
+            <option value="DOGEUSDT">DOGE/USDT</option>
+            <option value="SOLUSDT">SOL/USDT</option>
+          </select>
+          
+          <select 
+            value={chartConfig.timeframe} 
+            onChange={(e) => {
+              e.stopPropagation();
+              onConfigChange({...chartConfig, timeframe: e.target.value});
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="px-1 py-0.5 border rounded text-xs bg-white"
+          >
+            <option value="1m">1m</option>
+            <option value="5m">5m</option>
+            <option value="15m">15m</option>
+            <option value="1h">1h</option>
+            <option value="4h">4h</option>
+            <option value="1d">1d</option>
+          </select>
+
           {isConnected && (
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
           )}
         </div>
         <button
@@ -553,7 +584,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
           onMouseDown={(e) => {
             e.stopPropagation(); // Prevent drag from starting
           }}
-          className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded flex items-center justify-center"
+          className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded flex items-center justify-center text-xs"
           title="Remove chart"
         >
           ✕
