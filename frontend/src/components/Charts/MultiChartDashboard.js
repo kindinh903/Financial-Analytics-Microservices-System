@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import DashboardHeader from './DashboardHeader';
-import ChartsContainer from './ChartsContainer';
+import ResizableChartsContainer from './ResizableChartsContainer';
 import MultiChartModal from './MultiChartModal';
 import EmptyState from './EmptyState';
 
 const MultiChartDashboard = () => {
+  const resetLayoutRef = React.useRef(null);
+  
   const [charts, setCharts] = useState([
     { 
       id: 1, 
@@ -45,7 +47,13 @@ const MultiChartDashboard = () => {
   };
 
   const removeChart = (id) => {
-    setCharts(charts.filter(chart => chart.id !== id));
+    console.log('removeChart called with id:', id);
+    console.log('Current charts:', charts);
+    setCharts(prevCharts => {
+      const newCharts = prevCharts.filter(chart => chart.id !== id);
+      console.log('New charts after removal:', newCharts);
+      return newCharts;
+    });
   };
 
   const updateChart = (id, config) => {
@@ -63,18 +71,26 @@ const MultiChartDashboard = () => {
     setShowMultiChartModal(false);
   };
 
+  const handleResetLayout = () => {
+    if (resetLayoutRef.current) {
+      resetLayoutRef.current();
+    }
+  };
+
   return (
     <div className="w-full bg-gray-100">
       <DashboardHeader 
         onAddChart={addChart}
         onOpenMultiChartModal={() => setShowMultiChartModal(true)}
+        onResetLayout={handleResetLayout}
       />
 
       {charts.length > 0 ? (
-        <ChartsContainer 
+        <ResizableChartsContainer 
           charts={charts}
           onRemoveChart={removeChart}
           onUpdateChart={updateChart}
+          onResetLayout={resetLayoutRef}
         />
       ) : (
         <EmptyState onAddChart={addChart} />

@@ -337,6 +337,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
   useEffect(() => {
     let isMounted = true;
     let resizeHandler = null;
+    let resizeObserver = null;
 
     const initChart = async () => {
       if (!containerRef.current || !isMounted) return;
@@ -420,12 +421,24 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
 
         resizeHandler = () => {
           if (containerRef.current && chartRef.current && isMounted) {
-            chart.applyOptions({
-              width: containerRef.current.clientWidth,
-              height: containerRef.current.clientHeight,
+            // Use ResizeObserver for better resize detection
+            requestAnimationFrame(() => {
+              if (containerRef.current && chartRef.current && isMounted) {
+                const rect = containerRef.current.getBoundingClientRect();
+                chart.applyOptions({
+                  width: Math.max(rect.width, 300), // Minimum width
+                  height: Math.max(rect.height, 200), // Minimum height
+                });
+              }
             });
           }
         };
+        
+        // Use ResizeObserver for better resize detection
+        if (window.ResizeObserver && containerRef.current) {
+          resizeObserver = new ResizeObserver(resizeHandler);
+          resizeObserver.observe(containerRef.current);
+        }
         
         window.addEventListener('resize', resizeHandler);
         
@@ -449,6 +462,11 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
       
       if (resizeHandler) {
         window.removeEventListener('resize', resizeHandler);
+      }
+      
+      // Cleanup ResizeObserver
+      if (resizeObserver) {
+        resizeObserver.disconnect();
       }
       
       if (chartRef.current) {
@@ -514,7 +532,34 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
   const priceChangePercent = candles.length > 1 ? (priceChange / candles[candles.length - 2].close) * 100 : 0;
 
   return (
-    <div className="bg-white border rounded-lg shadow-sm" style={{ height: height + 120 }}>
+    <div className="bg-white border rounded-lg shadow-sm h-full flex flex-col" style={{ height: height + 120 }}>
+      {/* Drag Handle - ONLY this area can drag the chart */}
+      <div className="drag-handle">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-sm font-medium text-gray-700 select-none">
+            {chartConfig.symbol} - {chartConfig.timeframe}
+          </span>
+          {isConnected && (
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          )}
+        </div>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Remove button clicked for chart:', chartConfig.id);
+            onRemove();
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation(); // Prevent drag from starting
+          }}
+          className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded flex items-center justify-center"
+          title="Remove chart"
+        >
+          ✕
+        </button>
+      </div>
+
       <ChartHeader 
         chartConfig={chartConfig}
         onConfigChange={onConfigChange}
@@ -529,11 +574,20 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
         isConnected={isConnected}
       />
 
-      {/* Chart Container */}
+      {/* Chart Container - This area should NOT be draggable */}
       <div 
         ref={containerRef} 
         style={{ height: height, width: '100%' }}
         key={`container-${chartConfig.id || Date.now()}`}
+        className="flex-1 chart-interactive-area"
+        onMouseDown={(e) => {
+          // Explicitly prevent any drag events from starting in chart area
+          e.stopPropagation();
+        }}
+        onDragStart={(e) => {
+          e.preventDefault();
+          return false;
+        }}
       ></div>
 
       {/* Indicator Selector Modal */}

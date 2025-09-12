@@ -216,14 +216,6 @@ const ChartHeader = ({
           )}
         </div>
       </div>
-
-      {/* Right side - Remove button */}
-      <button 
-        onClick={onRemove}
-        className="text-red-500 hover:text-red-700 text-sm font-medium"
-      >
-        Remove
-      </button>
     </div>
   );
 };

@@ -13,20 +13,6 @@ const HomePage = () => {
           {/* Chart Section - Section 3 */}
           <div className="p-4">
             <div className="bg-white rounded-lg shadow-sm flex flex-col">
-              <div className="p-4 border-b flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-semibold">Multi-Chart Dashboard</h2>
-                    <div className="flex gap-2 text-sm">
-                      <span className="text-gray-600">Real-time data from API</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Cập nhật: {new Date().toLocaleTimeString('vi-VN')}
-                  </div>
-                </div>
-              </div>
-              
               {/* Multi-Chart Dashboard */}
               <div className="w-full">
                 <MultiChartDashboard/>
