@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import Charts from './pages/Charts';
 import Portfolio from './pages/Portfolio';
 import News from './pages/News';
 import Layout from './components/Layout/Layout';
@@ -24,8 +22,6 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Layout><Profile /></Layout>} />
         <Route path="/admin" element={<Layout><AdminPanel /></Layout>} />
-        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/charts" element={<Layout><Charts /></Layout>} />
         <Route path="/portfolio" element={<Layout><Portfolio /></Layout>} />
         <Route path="/news" element={<Layout><News /></Layout>} />
         <Route path="/backtest" element={<Layout><Backtest /></Layout>} />
