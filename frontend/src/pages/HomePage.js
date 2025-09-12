@@ -7,12 +7,12 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="flex">
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Chart Section - Section 3 */}
-          <div className="flex-1 p-4 overflow-hidden">
-            <div className="bg-white rounded-lg h-full shadow-sm flex flex-col">
+          <div className="p-4">
+            <div className="bg-white rounded-lg shadow-sm flex flex-col">
               <div className="p-4 border-b flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -28,7 +28,7 @@ const HomePage = () => {
               </div>
               
               {/* Multi-Chart Dashboard */}
-              <div className="flex-1 overflow-hidden">
+              <div className="w-full">
                 <MultiChartDashboard/>
               </div>
             </div>

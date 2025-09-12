@@ -64,7 +64,7 @@ const MultiChartDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="w-full bg-gray-100">
       <DashboardHeader 
         onAddChart={addChart}
         onOpenMultiChartModal={() => setShowMultiChartModal(true)}
@@ -80,13 +80,13 @@ const MultiChartDashboard = () => {
         <EmptyState onAddChart={addChart} />
       )}
 
-      <MultiChartModal 
+      {/* <MultiChartModal 
         isOpen={showMultiChartModal}
         onClose={() => setShowMultiChartModal(false)}
         multiChartConfig={multiChartConfig}
         setMultiChartConfig={setMultiChartConfig}
         onConfirm={handleMultiChartConfirm}
-      />
+      /> */}
     </div>
   );
 };

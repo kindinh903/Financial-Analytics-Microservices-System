@@ -335,11 +335,30 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
 
   // Initialize chart
   useEffect(() => {
+    let isMounted = true;
+    let resizeHandler = null;
+
     const initChart = async () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || !isMounted) return;
+      
+      // Clean up existing chart first
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove();
+        } catch (e) {
+          console.warn('Error removing existing chart:', e);
+        }
+        chartRef.current = null;
+        candleSeriesRef.current = null;
+        volumeSeriesRef.current = null;
+        indicatorSeriesRef.current = {};
+      }
       
       try {
         const { createChart } = await import('lightweight-charts');
+        
+        if (!isMounted || !containerRef.current) return;
+        
         const chart = createChart(containerRef.current, {
           width: containerRef.current.clientWidth,
           height: containerRef.current.clientHeight,
@@ -389,13 +408,18 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
           },
         });
 
+        if (!isMounted) {
+          chart.remove();
+          return;
+        }
+
         chartRef.current = chart;
         candleSeriesRef.current = candleSeries;
         volumeSeriesRef.current = volumeSeries;
         setIsReady(true);
 
-        const handleResize = () => {
-          if (containerRef.current && chartRef.current) {
+        resizeHandler = () => {
+          if (containerRef.current && chartRef.current && isMounted) {
             chart.applyOptions({
               width: containerRef.current.clientWidth,
               height: containerRef.current.clientHeight,
@@ -403,21 +427,42 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
           }
         };
         
-        window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', resizeHandler);
         
         // Initial resize after mount
-        setTimeout(handleResize, 100);
+        setTimeout(() => {
+          if (isMounted) {
+            resizeHandler();
+          }
+        }, 100);
         
-        return () => {
-          window.removeEventListener('resize', handleResize);
-          chart.remove();
-        };
       } catch (error) {
         console.error('Failed to initialize chart:', error);
       }
     };
 
     initChart();
+
+    return () => {
+      isMounted = false;
+      setIsReady(false);
+      
+      if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+      }
+      
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove();
+        } catch (e) {
+          console.warn('Error removing chart in cleanup:', e);
+        }
+        chartRef.current = null;
+        candleSeriesRef.current = null;
+        volumeSeriesRef.current = null;
+        indicatorSeriesRef.current = {};
+      }
+    };
   }, []);
 
   // Fetch initial data when chart is ready
@@ -485,7 +530,11 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
       />
 
       {/* Chart Container */}
-      <div ref={containerRef} style={{ height: height, width: '100%' }}></div>
+      <div 
+        ref={containerRef} 
+        style={{ height: height, width: '100%' }}
+        key={`container-${chartConfig.id || Date.now()}`}
+      ></div>
 
       {/* Indicator Selector Modal */}
       {showIndicatorSelector && (
