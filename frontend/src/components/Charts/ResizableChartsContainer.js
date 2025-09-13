@@ -100,9 +100,9 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
 
   return (
     <div className="p-4">
-      <div className="mb-3 text-xs text-gray-600 bg-blue-50 p-2 rounded-lg border border-blue-200">
+      <div className="mb-3 text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors duration-200">
         <div className="flex items-center gap-2">
-          <span className="text-blue-600 text-sm">💡</span>
+          <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
           <div>
             <strong className="text-xs">Hướng dẫn sử dụng:</strong>
             <ul className="mt-1 space-y-0.5 text-xs">
@@ -139,7 +139,7 @@ const ResizableChartsContainer = ({ charts, onRemoveChart, onUpdateChart, onRese
           return (
             <div 
               key={`chart-${chart.id}`}
-              className="bg-white rounded-lg shadow-sm border"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-200"
               style={{ overflow: 'hidden' }}
             >
               <TradingChart

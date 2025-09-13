@@ -58,7 +58,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      className="fixed inset-0 bg-black dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center transition-colors duration-200"
       style={{ zIndex: 9999 }}
       onClick={(e) => {
         e.stopPropagation();
@@ -68,12 +68,12 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
       }}
     >
       <div 
-        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
         style={{ zIndex: 10000, pointerEvents: 'auto' }}
       >
-        <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Add Indicator</h3>
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-600">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Indicator</h3>
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -81,7 +81,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
               onClose();
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="text-gray-400 hover:text-gray-600 text-xl font-semibold pointer-events-auto"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl font-semibold pointer-events-auto transition-colors"
             style={{ zIndex: 10001, cursor: 'pointer' }}
           >
             ×
@@ -99,7 +99,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
         >
           {/* Indicator Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Indicator Type
             </label>
             <select
@@ -109,7 +109,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
                 handleIndicatorChange(e.target.value);
               }}
               onMouseDown={(e) => e.stopPropagation()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pointer-events-auto bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors"
               style={{ zIndex: 10001, cursor: 'pointer' }}
               required
             >
@@ -125,7 +125,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
           {/* Period Input */}
           {selectedIndicator && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Period
               </label>
               <input
@@ -138,7 +138,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
                 onMouseDown={(e) => e.stopPropagation()}
                 min="1"
                 max="200"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pointer-events-auto bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors"
                 style={{ zIndex: 10001, cursor: 'text' }}
                 required
               />
@@ -148,7 +148,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
           {/* Standard Deviation for Bollinger Bands */}
           {selectedIndicator === 'BOLL' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Standard Deviation
               </label>
               <input
@@ -162,7 +162,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
                 min="0.1"
                 max="5"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pointer-events-auto bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors"
                 style={{ zIndex: 10001, cursor: 'text' }}
                 required
               />
@@ -172,7 +172,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
           {/* Color Selection */}
           {selectedIndicator && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Color
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -186,8 +186,8 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
                       setColor(colorOption.value);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className={`w-full h-8 rounded border-2 pointer-events-auto ${
-                      color === colorOption.value ? 'border-gray-900' : 'border-gray-300'
+                    className={`w-full h-8 rounded border-2 pointer-events-auto transition-colors ${
+                      color === colorOption.value ? 'border-gray-900 dark:border-gray-100' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     style={{ 
                       backgroundColor: colorOption.value,
@@ -203,7 +203,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
 
           {/* Warning for existing indicators */}
           {selectedIndicator && isIndicatorExists(selectedIndicator, period) && (
-            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-sm">
+            <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-300 px-3 py-2 rounded text-sm transition-colors duration-200">
               This indicator with the same period already exists.
             </div>
           )}
@@ -218,7 +218,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
                 onClose();
               }}
               onMouseDown={(e) => e.stopPropagation()}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 pointer-events-auto"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pointer-events-auto transition-colors duration-200"
               style={{ zIndex: 10001, cursor: 'pointer' }}
             >
               Cancel
@@ -231,7 +231,7 @@ const IndicatorSelector = ({ onAddIndicator, onClose, existingIndicators }) => {
               }}
               onMouseDown={(e) => e.stopPropagation()}
               disabled={!selectedIndicator || isIndicatorExists(selectedIndicator, period)}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
+              className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto transition-colors duration-200"
               style={{ zIndex: 10001, cursor: selectedIndicator && !isIndicatorExists(selectedIndicator, period) ? 'pointer' : 'not-allowed' }}
             >
               Add Indicator

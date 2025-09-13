@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { priceService } from '../../services/api';
 import { useWebSocketChart } from '../../hooks/useWebSocket';
+import { useTheme } from '../../contexts/ThemeContext';
 import ChartHeader from './ChartHeader';
 import IndicatorSelector from './IndicatorSelector';
 
@@ -16,6 +17,8 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
   const [error, setError] = useState(null);
   const [showIndicatorSelector, setShowIndicatorSelector] = useState(false);
   const [currentPrice, setCurrentPrice] = useState(0);
+  
+  const { isDarkMode } = useTheme();
 
   // Handle WebSocket candle updates
   const handleCandleUpdate = useCallback((data) => {
@@ -364,20 +367,22 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
           width: containerRef.current.clientWidth,
           height: containerRef.current.clientHeight,
           layout: {
-            background: { color: '#ffffff' },
-            textColor: '#333'
+            background: { color: isDarkMode ? '#1f2937' : '#ffffff' },
+            textColor: isDarkMode ? '#e5e7eb' : '#333'
           },
           grid: {
-            vertLines: { color: '#f0f0f0' },
-            horzLines: { color: '#f0f0f0' }
+            vertLines: { color: isDarkMode ? '#374151' : '#f0f0f0' },
+            horzLines: { color: isDarkMode ? '#374151' : '#f0f0f0' }
           },
           rightPriceScale: {
             borderVisible: false,
+            textColor: isDarkMode ? '#e5e7eb' : '#333',
           },
           timeScale: {
             borderVisible: false,
             timeVisible: true,
-            secondsVisible: false
+            secondsVisible: false,
+            textColor: isDarkMode ? '#e5e7eb' : '#333',
           },
           crosshair: {
             mode: 1
@@ -497,6 +502,32 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
     }
   }, [isReady, chartConfig.indicators, updateIndicators, candles]);
 
+  // Update chart theme when dark mode changes
+  useEffect(() => {
+    if (chartRef.current) {
+      chartRef.current.applyOptions({
+        layout: {
+          background: { color: isDarkMode ? '#1f2937' : '#ffffff' },
+          textColor: isDarkMode ? '#e5e7eb' : '#333'
+        },
+        grid: {
+          vertLines: { color: isDarkMode ? '#374151' : '#f0f0f0' },
+          horzLines: { color: isDarkMode ? '#374151' : '#f0f0f0' }
+        },
+        rightPriceScale: {
+          borderVisible: false,
+          textColor: isDarkMode ? '#e5e7eb' : '#333',
+        },
+        timeScale: {
+          borderVisible: false,
+          timeVisible: true,
+          secondsVisible: false,
+          textColor: isDarkMode ? '#e5e7eb' : '#333',
+        }
+      });
+    }
+  }, [isDarkMode]);
+
   // Handle adding new indicator
   const handleAddIndicator = (indicatorConfig) => {
     const newIndicators = [...chartConfig.indicators, {
@@ -532,9 +563,9 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
   const priceChangePercent = candles.length > 1 ? (priceChange / candles[candles.length - 2].close) * 100 : 0;
 
   return (
-    <div className="bg-white border rounded-lg shadow-sm h-full flex flex-col" style={{ height: height + 120 }}>
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm h-full flex flex-col transition-colors duration-200" style={{ height: height + 120 }}>
       {/* Drag Handle - ONLY this area can drag the chart */}
-      <div className="drag-handle">
+      <div className="drag-handle flex items-center justify-between p-2 bg-gray-700 border-b border-gray-600 rounded-t-lg">
         <div className="flex items-center gap-2 flex-1">
           <select 
             value={chartConfig.symbol} 
@@ -543,7 +574,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
               onConfigChange({...chartConfig, symbol: e.target.value});
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="px-1 py-0.5 border rounded text-xs bg-white"
+            className="px-1 py-0.5 border border-gray-600 rounded text-xs bg-gray-700 text-gray-100"
           >
             <option value="BTCUSDT">BTC/USDT</option>
             <option value="ETHUSDT">ETH/USDT</option>
@@ -560,7 +591,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
               onConfigChange({...chartConfig, timeframe: e.target.value});
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="px-1 py-0.5 border rounded text-xs bg-white"
+            className="px-1 py-0.5 border border-gray-600 rounded text-xs bg-gray-700 text-gray-100"
           >
             <option value="1m">1m</option>
             <option value="5m">5m</option>
@@ -584,7 +615,7 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
           onMouseDown={(e) => {
             e.stopPropagation(); // Prevent drag from starting
           }}
-          className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded flex items-center justify-center text-xs"
+          className="text-gray-400 hover:text-red-400 p-1 rounded flex items-center justify-center text-xs"
           title="Remove chart"
         >
           ✕

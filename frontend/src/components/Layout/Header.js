@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import ThemeToggle from '../UI/ThemeToggle';
 
 const Header = () => {
   const location = useLocation();
@@ -34,15 +35,15 @@ const Header = () => {
   }
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
                 <span className="text-white text-lg font-bold">F</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Financial Analytics</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">Financial Analytics</span>
             </Link>
           </div>
           
@@ -53,8 +54,8 @@ const Header = () => {
                 to={item.path}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   location.pathname === item.path
-                    ? 'text-primary-600 bg-primary-50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
                 <span>{item.icon}</span>
@@ -64,7 +65,9 @@ const Header = () => {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md">
+            <ThemeToggle />
+            
+            <button className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
               <span className="sr-only">Notifications</span>
               🔔
             </button>
@@ -74,10 +77,10 @@ const Header = () => {
               <div className="flex items-center space-x-3">
                 <Link 
                   to="/profile" 
-                  className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
+                  className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium">
+                  <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                       {user.firstName?.[0]}{user.lastName?.[0]}
                     </span>
                   </div>
@@ -85,7 +88,7 @@ const Header = () => {
                     {user.firstName} {user.lastName}
                   </span>
                   {user.role === 'admin' && (
-                    <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 rounded-full">
                       Admin
                     </span>
                   )}
@@ -93,7 +96,7 @@ const Header = () => {
                 
                 <button 
                   onClick={handleLogout}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   Logout
                 </button>
@@ -103,13 +106,13 @@ const Header = () => {
               <div className="flex items-center space-x-3">
                 <Link 
                   to="/login"
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   Login
                 </Link>
                 <Link 
                   to="/register"
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md"
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 dark:bg-primary-500 hover:bg-primary-700 dark:hover:bg-primary-600 rounded-md transition-colors"
                 >
                   Register
                 </Link>

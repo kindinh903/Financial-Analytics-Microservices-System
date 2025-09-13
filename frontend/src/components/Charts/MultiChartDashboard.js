@@ -77,7 +77,7 @@ const MultiChartDashboard = () => {
   };
 
   return (
-    <div className="w-full bg-gray-100">
+    <div className="w-full bg-gray-100 dark:bg-gray-800 transition-colors duration-200">
       <DashboardHeader 
         onAddChart={addChart}
         onOpenMultiChartModal={() => setShowMultiChartModal(true)}
