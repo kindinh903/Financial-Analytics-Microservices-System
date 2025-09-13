@@ -69,10 +69,50 @@ const TradingChart = ({ chartConfig, onRemove, onConfigChange, height = 300 }) =
 
   // Handle WebSocket price updates
   const handlePriceUpdate = useCallback((data) => {
+    console.log(`💰 WebSocket price data for ${chartConfig.symbol}:`, data);
+    
     if (data && data.price) {
-      setCurrentPrice(parseFloat(data.price) || 0);
+      const newPrice = parseFloat(data.price) || 0;
+      console.log(`📊 Updating price for ${chartConfig.symbol} to:`, newPrice);
+      setCurrentPrice(newPrice);
+      
+      // Update the last candle with the new price if we have candles
+      setCandles(prevCandles => {
+        if (prevCandles.length === 0) {
+          console.log(`⚠️ No candles available for ${chartConfig.symbol}, skipping price update`);
+          return prevCandles;
+        }
+        
+        const updatedCandles = [...prevCandles];
+        const lastIndex = updatedCandles.length - 1;
+        const lastCandle = updatedCandles[lastIndex];
+        
+        // Create updated candle with new price
+        const updatedCandle = {
+          ...lastCandle,
+          close: newPrice,
+          high: Math.max(lastCandle.high, newPrice),
+          low: Math.min(lastCandle.low, newPrice)
+        };
+        
+        updatedCandles[lastIndex] = updatedCandle;
+        
+        // Update chart with the new candle data
+        if (candleSeriesRef.current) {
+          try {
+            console.log(`🎯 Updating chart candle for ${chartConfig.symbol}:`, updatedCandle);
+            candleSeriesRef.current.update(updatedCandle);
+          } catch (error) {
+            console.error(`❌ Error updating chart for ${chartConfig.symbol}:`, error);
+          }
+        } else {
+          console.warn(`⚠️ Candle series not available for ${chartConfig.symbol}`);
+        }
+        
+        return updatedCandles;
+      });
     }
-  }, []);
+  }, [chartConfig.symbol]);
 
   // Handle WebSocket errors
   const handleWebSocketError = useCallback((error) => {
