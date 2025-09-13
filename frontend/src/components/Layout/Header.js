@@ -24,7 +24,6 @@ const Header = () => {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/charts', label: 'Charts', icon: '📈' },
     { path: '/news', label: 'News', icon: '📰' },
     { path: '/backtest', label: 'Backtest', icon: '🔬' },
   ];

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dark Theme - Financial Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* CSS giống index.css */
+        .bg-white:not(.no-auto-theme) {
+            background-color: white !important;
+        }
+
+        .dark .bg-white:not(.no-auto-theme) {
+            background-color: #1f2937 !important;
+        }
+
+        .border-gray-200:not(.no-auto-theme) {
+            border-color: #e5e7eb !important;
+        }
+
+        .dark .border-gray-200:not(.no-auto-theme) {
+            border-color: #374151 !important;
+        }
+
+        input:not(.no-auto-theme), 
+        select:not(.no-auto-theme), 
+        textarea:not(.no-auto-theme) {
+            background-color: white !important;
+            color: #111827 !important;
+            border-color: #d1d5db !important;
+        }
+
+        .dark input:not(.no-auto-theme), 
+        .dark select:not(.no-auto-theme), 
+        .dark textarea:not(.no-auto-theme) {
+            background-color: #374151 !important;
+            color: #f9fafb !important;
+            border-color: #4b5563 !important;
+        }
+
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Financial Analytics</h1>
+                    <button 
+                        onclick="toggleTheme()" 
+                        class="p-2 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                        <span id="theme-icon" class="w-5 h-5 block">🌙</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <!-- Test Card 1: Login Form Style -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Login Form Test</h2>
+                <div class="bg-white dark:bg-gray-800 p-8 rounded shadow-md w-80 mx-auto transition-colors duration-200">
+                    <h3 class="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">Đăng nhập</h3>
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        class="w-full mb-4 p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400"
+                    />
+                    <input
+                        type="password"
+                        placeholder="Mật khẩu"
+                        class="w-full mb-4 p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400"
+                    />
+                    <button class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200">
+                        Đăng nhập
+                    </button>
+                </div>
+            </div>
+
+            <!-- Test Card 2: Data Table Style -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Data Table Test</h2>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Symbol</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Price</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Change</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">BTC/USDT</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">$65,000</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">+2.5%</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">ETH/USDT</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">$3,200</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">-1.2%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Test Card 3: Chart Container Style -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Chart Container Test</h2>
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm transition-colors duration-200">
+                    <!-- Chart Header -->
+                    <div class="drag-handle flex items-center justify-between p-2 bg-gray-700 border-b border-gray-600 rounded-t-lg">
+                        <div class="flex items-center gap-2 flex-1">
+                            <select class="px-1 py-0.5 border border-gray-600 rounded text-xs bg-gray-700 text-gray-100">
+                                <option value="BTCUSDT">BTC/USDT</option>
+                                <option value="ETHUSDT">ETH/USDT</option>
+                            </select>
+                            <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                        </div>
+                        <button class="text-gray-400 hover:text-red-400 p-1 rounded">✕</button>
+                    </div>
+                    <!-- Chart Body -->
+                    <div class="p-4">
+                        <div class="h-64 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center text-gray-500 dark:text-gray-400">
+                            Chart Area (Simulated)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Card 4: Form Elements -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Form Elements Test</h2>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Input Field</label>
+                            <input type="text" placeholder="Enter text..." class="w-full p-2 border rounded">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Field</label>
+                            <select class="w-full p-2 border rounded">
+                                <option>Option 1</option>
+                                <option>Option 2</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Textarea</label>
+                            <textarea placeholder="Enter description..." class="w-full p-2 border rounded h-20"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let isDarkMode = localStorage.getItem('theme') === 'dark' || 
+                         (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        function updateTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (isDarkMode) {
+                html.classList.add('dark');
+                icon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.classList.remove('dark');
+                icon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            updateTheme();
+        }
+
+        // Initialize theme
+        updateTheme();
+
+        // Test auto-styling of elements
+        setTimeout(() => {
+            console.log('Testing theme styles...');
+            const whiteElements = document.querySelectorAll('.bg-white');
+            const borderElements = document.querySelectorAll('.border-gray-200');
+            const inputs = document.querySelectorAll('input, select, textarea');
+            
+            console.log('White background elements:', whiteElements.length);
+            console.log('Gray border elements:', borderElements.length);
+            console.log('Input elements:', inputs.length);
+        }, 1000);
+    </script>
+</body>
+</html>

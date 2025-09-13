@@ -40,28 +40,28 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-8 rounded shadow-md w-80">
-        <h2 className="text-2xl font-bold mb-6 text-center">Đăng nhập</h2>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-gray-800 p-8 rounded shadow-md w-80 transition-colors duration-200">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">Đăng nhập</h2>
         <input
           {...register('email')}
           type="email"
           placeholder="Email"
-          className="w-full mb-4 p-2 border rounded"
+          className="w-full mb-4 p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400"
           required
         />
         <input
           {...register('password')}
           type="password"
           placeholder="Mật khẩu"
-          className="w-full mb-4 p-2 border rounded"
+          className="w-full mb-4 p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400"
           required
         />
-        <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+        <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200">
           Đăng nhập
         </button>
-        <p className="mt-4 text-center text-sm">
-          Chưa có tài khoản? <Link to="/register" className="text-blue-500">Đăng ký</Link>
+        <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-300">
+          Chưa có tài khoản? <Link to="/register" className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300">Đăng ký</Link>
         </p>
       </form>
     </div>

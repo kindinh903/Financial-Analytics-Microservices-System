@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global theme variables */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.dark {
+  --bg-primary: #1f2937;
+  --bg-secondary: #111827;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --border-color: #374151;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -10,11 +29,100 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s, color 0.2s;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Auto-apply theme to common elements */
+/* Override white backgrounds globally */
+.bg-white:not(.no-auto-theme) {
+  background-color: white !important;
+}
+
+.dark .bg-white:not(.no-auto-theme) {
+  background-color: #1f2937 !important;
+}
+
+/* Override gray borders globally */
+.border-gray-200:not(.no-auto-theme) {
+  border-color: #e5e7eb !important;
+}
+
+.dark .border-gray-200:not(.no-auto-theme) {
+  border-color: #374151 !important;
+}
+
+/* Override text colors globally */
+.text-gray-900:not(.no-auto-theme) {
+  color: #111827 !important;
+}
+
+.dark .text-gray-900:not(.no-auto-theme) {
+  color: #f9fafb !important;
+}
+
+.text-gray-600:not(.no-auto-theme) {
+  color: #4b5563 !important;
+}
+
+.dark .text-gray-600:not(.no-auto-theme) {
+  color: #d1d5db !important;
+}
+
+.text-gray-500:not(.no-auto-theme) {
+  color: #6b7280 !important;
+}
+
+.dark .text-gray-500:not(.no-auto-theme) {
+  color: #9ca3af !important;
+}
+
+/* Override table rows */
+tbody.bg-white {
+  background-color: white !important;
+}
+
+.dark tbody.bg-white {
+  background-color: #1f2937 !important;
+}
+
+tbody.divide-gray-200 tr {
+  border-color: #e5e7eb !important;
+}
+
+.dark tbody.divide-gray-200 tr {
+  border-color: #374151 !important;
+}
+
+/* Input styling */
+input:not(.no-auto-theme):not([type="file"]), 
+select:not(.no-auto-theme), 
+textarea:not(.no-auto-theme) {
+  background-color: white !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+.dark input:not(.no-auto-theme):not([type="file"]), 
+.dark select:not(.no-auto-theme), 
+.dark textarea:not(.no-auto-theme) {
+  background-color: #374151 !important;
+  color: #f9fafb !important;
+  border-color: #4b5563 !important;
+}
+
+/* Form styling */
+form.bg-white {
+  background-color: white !important;
+}
+
+.dark form.bg-white {
+  background-color: #1f2937 !important;
 }
 
 /* Custom scrollbar */
