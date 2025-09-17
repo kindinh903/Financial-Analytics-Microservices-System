@@ -70,7 +70,8 @@ services:
   price-service:
     build: ./services/price-service
     container_name: price-service
-    expose: ["8081"]         
+    expose: ["8081", "9090"]         
+
     environment:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
@@ -123,6 +124,7 @@ services:
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=BacktestDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
       - Services__AiService__BaseUrl=http://ai-predict-service:8084
       - Services__PriceService__BaseUrl=http://price-service:8081
+      - Services__PriceService__GrpcEndpoint=http://price-service:9090
     depends_on:
       - sqlserver
       - ai-predict-service

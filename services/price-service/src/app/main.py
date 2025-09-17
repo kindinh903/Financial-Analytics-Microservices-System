@@ -10,6 +10,10 @@ from app.services.ws_manager import WSManager
 from app.services.kafka_producer import kafka_producer
 import logging
 import uvicorn
+import asyncio
+import grpc
+from app.grpc_server import PriceServiceGrpc
+from app.grpc import price_pb2_grpc
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,7 +39,19 @@ async def lifespan(app: FastAPI):
     
     app.state.ws_manager = WSManager(intervals=INTERVALS)
     app.state.ws_manager.start_all()
+Đ    
+    # Start gRPC server
+    grpc_server = grpc.aio.server()
+    price_pb2_grpc.add_PriceServiceServicer_to_server(PriceServiceGrpc(), grpc_server)
+    grpc_server.add_insecure_port("0.0.0.0:9090")
+    await grpc_server.start()
+    logging.info("gRPC server started on port 9090")
+    app.state.grpc_server = grpc_server
+    
     yield
+    
+    # Shutdown
+    await grpc_server.stop(grace=5.0)
     await redis_client.close()
     await influx_writer.close()
     
