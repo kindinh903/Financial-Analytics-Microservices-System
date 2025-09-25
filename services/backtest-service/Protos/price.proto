@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option csharp_namespace = "BacktestService.Grpc";
+
+package price;
+
+message GetHistoricalDataRequest {
+  string symbol = 1;
+  string interval = 2;
+  int64 start_time_ms = 3;
+  int64 end_time_ms = 4;
+  int32 limit = 5;
+}
+
+message CandleData {
+  int64 open_time = 1;
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  double volume = 6;
+  int64 close_time = 7;
+}
+
+message GetHistoricalDataResponse {
+  repeated CandleData candles = 1;
+}
+
+service PriceService {
+  rpc GetHistoricalData (GetHistoricalDataRequest) returns (GetHistoricalDataResponse);
+}
+
+
