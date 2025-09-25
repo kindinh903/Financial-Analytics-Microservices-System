@@ -245,13 +245,15 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task<bool> LogoutAsync(string token)
+    public async Task<bool> LogoutAsync(string refreshToken)
     {
         // Remove refresh token from DB
-        var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == token);
-        if (refreshToken != null)
+        Console.WriteLine("Logging out token: " + refreshToken);
+        var token = await _dbContext.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+        Console.WriteLine("Found refresh token: " + (token != null));
+        if (token != null)
         {
-            _dbContext.RefreshTokens.Remove(refreshToken);
+            _dbContext.RefreshTokens.Remove(token);
             await _dbContext.SaveChangesAsync();
             return true;
         }

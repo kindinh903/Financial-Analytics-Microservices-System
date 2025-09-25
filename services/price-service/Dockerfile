@@ -11,7 +11,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY protos/ ./protos/
 
 # Create grpc directory and generate gRPC Python stubs
-RUN mkdir -p ./src/app/grpc && python -m grpc_tools.protoc -I./protos --python_out=./src/app/grpc --grpc_python_out=./src/app/grpc ./protos/price.proto
+RUN mkdir -p ./src/app/grpc && \
+    python -m grpc_tools.protoc -I./protos --python_out=./src/app/grpc --grpc_python_out=./src/app/grpc ./protos/price.proto && \
+    touch ./src/app/grpc/__init__.py
+
+# Fix import issue in generated gRPC files
+RUN sed -i 's/import price_pb2 as price__pb2/from . import price_pb2 as price__pb2/g' ./src/app/grpc/price_pb2_grpc.py
 
 # Copy toàn bộ mã nguồn vào container
 COPY . .

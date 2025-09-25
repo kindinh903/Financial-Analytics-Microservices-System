@@ -41,6 +41,8 @@ namespace AuthService.Services
                 if (!string.IsNullOrEmpty(lastName)) request.Headers.Add("X-User-Last-Name", lastName);
 
                 var response = await _httpClient.SendAsync(request);
+                Console.WriteLine($"Received response with status code: {response.StatusCode}");
+                Console.WriteLine($"Response content: {await response.Content.ReadAsStringAsync()}");
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<UserPermissionsDto>();

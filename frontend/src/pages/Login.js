@@ -19,7 +19,6 @@ export default function Login() {
         alert('Đăng nhập thành công!');
         if (result.accessToken) {
           localStorage.setItem('accessToken', result.accessToken);
-          localStorage.setItem('refreshToken', result.refreshToken);
         }
         if (result.user) {
           localStorage.setItem('user', JSON.stringify(result.user));

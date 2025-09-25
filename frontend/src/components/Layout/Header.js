@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../UI/ThemeToggle';
+import { authService } from '../../services/api';
 
 const Header = () => {
   const location = useLocation();
@@ -15,11 +16,20 @@ const Header = () => {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Gọi API logout để invalidate token trên server
+      await authService.logout();
+    } catch (error) {
+      // Log error nhưng vẫn tiếp tục logout ở client
+      console.error('Logout API call failed:', error);
+    } finally {
+      // Luôn xóa token ở localStorage và redirect
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      // Refresh token sẽ được xóa bởi server khi gọi logout API
+      navigate('/login');
+    }
   };
 
   const navItems = [

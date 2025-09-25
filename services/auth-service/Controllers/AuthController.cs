@@ -24,6 +24,36 @@ public class AuthController : ControllerBase
         _userServiceClient = userServiceClient;
     }
 
+    private void SetRefreshTokenCookie(string refreshToken)
+    {
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true, // Không thể truy cập từ JavaScript
+            Secure = false,  // Set false cho development (HTTP), true cho production (HTTPS)
+            SameSite = SameSiteMode.Lax, // Lax thay vì Strict để tương thích với cross-origin requests
+            Expires = DateTime.UtcNow.AddDays(7), // 7 ngày
+            Path = "/"
+        };
+
+        Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
+    }
+
+    private string? GetRefreshTokenFromCookie()
+    {
+        return Request.Cookies["refreshToken"];
+    }
+
+    private void ClearRefreshTokenCookie()
+    {
+        Response.Cookies.Delete("refreshToken", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = false,  // Set false cho development
+            SameSite = SameSiteMode.Lax,
+            Path = "/"
+        });
+    }
+
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
     {
@@ -51,6 +81,12 @@ public class AuthController : ControllerBase
                     Console.WriteLine($"Kafka publish error: {ex.Message}");
                 }
             });
+            
+            // Lưu refresh token vào HTTP-only cookie
+            SetRefreshTokenCookie(response.RefreshToken);
+            
+            // Không trả refresh token trong response body nữa
+            response.RefreshToken = null;
             
             // Return the response with tokens immediately
             return Ok(response);
@@ -117,40 +153,63 @@ public class AuthController : ControllerBase
         var enrichedAccessToken = _jwtService.GenerateAccessToken(appUser, claims);
 
         response.AccessToken = enrichedAccessToken;
+        
+        // Lưu refresh token vào HTTP-only cookie
+        SetRefreshTokenCookie(response.RefreshToken);
+        
+        response.RefreshToken = null;
+        
         return Ok(response);
     }
 
     [HttpPost("logout")]
-    public async Task<ActionResult> Logout([FromHeader(Name = "Authorization")] string authorization)
+    public async Task<ActionResult> Logout()
     {
-        if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
-        {
-            return BadRequest("Invalid authorization header");
-        }
-
-        var token = authorization.Substring("Bearer ".Length);
-        var result = await _authService.LogoutAsync(token);
+        // Lấy refresh token từ cookie
+        var refreshToken = GetRefreshTokenFromCookie();
         
-        if (result)
+        // Luôn xóa refresh token cookie trước
+        ClearRefreshTokenCookie();
+
+        // Nếu có refresh token, thì revoke nó trong database
+        if (!string.IsNullOrEmpty(refreshToken))
         {
-            return Ok(new { message = "Logout successful" });
+            var result = await _authService.LogoutAsync(refreshToken);
+            if (result)
+            {
+                return Ok(new { message = "Logout successful" });
+            }
+            else
+            {
+                // Ngay cả khi không tìm thấy token trong DB, vẫn coi là logout thành công
+                return Ok(new { message = "Logout successful (token not found in database)" });
+            }
         }
 
-        return BadRequest(new { message = "Logout failed" });
+        // Không có refresh token trong cookie, nhưng vẫn coi là logout thành công
+        return Ok(new { message = "Logout successful (no refresh token found)" });
     }
 
     [HttpPost("refresh")]
-    public async Task<ActionResult<AuthResponse>> RefreshToken([FromBody] RefreshTokenRequest request)
+    public async Task<ActionResult<AuthResponse>> RefreshToken()
     {
-        if (!ModelState.IsValid)
+        // Lấy refresh token từ cookie thay vì request body
+        var refreshToken = GetRefreshTokenFromCookie();
+        if (string.IsNullOrEmpty(refreshToken))
         {
-            return BadRequest(ModelState);
+            return BadRequest(new { message = "Refresh token not found in cookie" });
         }
 
-        var response = await _authService.RefreshTokenAsync(request.RefreshToken);
+        var response = await _authService.RefreshTokenAsync(refreshToken);
         
         if (response.Success)
         {
+            // Lưu refresh token mới vào cookie
+            SetRefreshTokenCookie(response.RefreshToken);
+            
+            // Không trả refresh token trong response body
+            response.RefreshToken = null;
+            
             return Ok(response);
         }
 

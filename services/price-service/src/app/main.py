@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     
     app.state.ws_manager = WSManager(intervals=INTERVALS)
     app.state.ws_manager.start_all()
-Đ    
+    
     # Start gRPC server
     grpc_server = grpc.aio.server()
     price_pb2_grpc.add_PriceServiceServicer_to_server(PriceServiceGrpc(), grpc_server)

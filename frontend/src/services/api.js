@@ -9,6 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Đảm bảo cookies được gửi cùng với requests
 });
 
 // Request interceptor
@@ -33,8 +34,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
+      // Refresh token trong cookie sẽ tự động expired hoặc được clear bởi server
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -90,8 +91,8 @@ export const authService = {
   register: (userData) =>
     api.post('/api/auth/register', userData),
 
-  refreshToken: (refreshToken) =>
-    api.post('/api/auth/refresh', { refreshToken }),
+  refreshToken: () =>
+    api.post('/api/auth/refresh'), // Không cần gửi refreshToken trong body nữa, sẽ lấy từ cookie
 
   logout: () =>
     api.post('/api/auth/logout'),
