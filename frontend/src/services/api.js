@@ -2,6 +2,32 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
+// Token manager để lưu access token trong memory
+class TokenManager {
+  constructor() {
+    this.accessToken = null;
+  }
+
+  setAccessToken(token) {
+    this.accessToken = token;
+  }
+
+  getAccessToken() {
+    return this.accessToken;
+  }
+
+  clearAccessToken() {
+    this.accessToken = null;
+  }
+
+  hasAccessToken() {
+    return this.accessToken !== null;
+  }
+}
+
+// Singleton instance
+const tokenManager = new TokenManager();
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -15,8 +41,8 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem('accessToken');
+    // Add auth token if available from memory
+    const token = tokenManager.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -42,8 +68,8 @@ api.interceptors.response.use(
         const refreshResponse = await api.post('/api/auth/refresh');
         
         if (refreshResponse.data.accessToken) {
-          // Lưu access token mới
-          localStorage.setItem('accessToken', refreshResponse.data.accessToken);
+          // Lưu access token mới vào memory
+          tokenManager.setAccessToken(refreshResponse.data.accessToken);
           
           // Cập nhật header cho request ban đầu
           originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.accessToken}`;
@@ -53,9 +79,11 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         console.log('Refresh token failed:', refreshError);
-        // Refresh thất bại, redirect to login
-        localStorage.removeItem('accessToken');
+        // Refresh thất bại, clear token và redirect to login
+        tokenManager.clearAccessToken();
         localStorage.removeItem('user');
+        // Note: Không thể sử dụng AuthContext ở đây vì đây là service layer
+        // AuthContext sẽ được update tự động khi user reload page
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -63,8 +91,9 @@ api.interceptors.response.use(
 
     // Nếu không phải 401 hoặc đã retry rồi mà vẫn lỗi
     if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
+      tokenManager.clearAccessToken();
       localStorage.removeItem('user');
+      // Note: Không thể sử dụng AuthContext ở đây vì đây là service layer
       window.location.href = '/login';
     }
     
@@ -285,5 +314,8 @@ export const crawlerService = {
   getWarehouseStats: () =>
     api.get('/api/crawler/data/warehouse/stats'),
 };
+
+// Export tokenManager để sử dụng ở các component khác
+export { tokenManager };
 
 export default api;

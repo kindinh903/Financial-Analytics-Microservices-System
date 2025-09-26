@@ -2,10 +2,12 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const { register, handleSubmit } = useForm();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onSubmit = async data => {
     try {
@@ -17,12 +19,12 @@ export default function Login() {
       const result = response.data;
       if (result.success !== false) {
         alert('Đăng nhập thành công!');
-        if (result.accessToken) {
-          localStorage.setItem('accessToken', result.accessToken);
+        
+        // Sử dụng AuthContext để handle login
+        if (result.accessToken && result.user) {
+          login(result.user, result.accessToken);
         }
-        if (result.user) {
-          localStorage.setItem('user', JSON.stringify(result.user));
-        }
+        
         navigate('/'); // Chuyển hướng về trang chủ
       } else {
         alert('Đăng nhập thất bại:\n' + result.message);

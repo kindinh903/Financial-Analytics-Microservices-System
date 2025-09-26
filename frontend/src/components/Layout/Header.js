@@ -1,20 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../UI/ThemeToggle';
 import { authService } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    // Get user from localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  const { user, isAuthenticated, logout: authLogout } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -24,9 +17,8 @@ const Header = () => {
       // Log error nhưng vẫn tiếp tục logout ở client
       console.error('Logout API call failed:', error);
     } finally {
-      // Luôn xóa token ở localStorage và redirect
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
+      // Sử dụng AuthContext để handle logout
+      authLogout();
       // Refresh token sẽ được xóa bởi server khi gọi logout API
       navigate('/login');
     }
@@ -81,7 +73,7 @@ const Header = () => {
               🔔
             </button>
             
-            {user ? (
+            {isAuthenticated ? (
               // Đã đăng nhập - hiển thị profile và logout
               <div className="flex items-center space-x-3">
                 <Link 
