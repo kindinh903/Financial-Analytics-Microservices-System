@@ -27,17 +27,47 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor với auto refresh token
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Thử refresh token
+        console.log('Access token expired, attempting to refresh...');
+        const refreshResponse = await api.post('/api/auth/refresh');
+        
+        if (refreshResponse.data.accessToken) {
+          // Lưu access token mới
+          localStorage.setItem('accessToken', refreshResponse.data.accessToken);
+          
+          // Cập nhật header cho request ban đầu
+          originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.accessToken}`;
+          
+          console.log('Token refreshed successfully, retrying original request');
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        console.log('Refresh token failed:', refreshError);
+        // Refresh thất bại, redirect to login
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Nếu không phải 401 hoặc đã retry rồi mà vẫn lỗi
     if (error.response?.status === 401) {
-      // Handle unauthorized access
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
-      // Refresh token trong cookie sẽ tự động expired hoặc được clear bởi server
       window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );

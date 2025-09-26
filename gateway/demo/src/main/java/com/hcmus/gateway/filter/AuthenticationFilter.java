@@ -1,6 +1,7 @@
 package com.hcmus.gateway.filter;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -127,10 +128,14 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 logger.debug("JWT processed successfully, forwarding with user headers");
                 return chain.filter(exchange.mutate().request(mutated).build());
                 
+            } catch (ExpiredJwtException ex) {
+                logger.warn("Gateway JWT expired: {}", ex.getMessage());
+                // JWT hết hạn, trả về 401
+                return unauthorized(exchange, "Token expired");
             } catch (Exception ex) {
-                logger.warn("Gateway JWT verify failed: {}, forwarding request without user headers", ex.getMessage());
-                // Nếu JWT không hợp lệ, vẫn forward request nhưng không có user headers
-                return chain.filter(exchange);
+                logger.warn("Gateway JWT verify failed: {}", ex.getMessage());
+                // JWT invalid vì lý do khác, trả về 401
+                return unauthorized(exchange, "Invalid token");
             }
         };
     }

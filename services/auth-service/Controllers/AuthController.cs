@@ -28,10 +28,10 @@ public class AuthController : ControllerBase
     {
         var cookieOptions = new CookieOptions
         {
-            HttpOnly = true, // Không thể truy cập từ JavaScript
+            HttpOnly = true,
             Secure = false,  // Set false cho development (HTTP), true cho production (HTTPS)
             SameSite = SameSiteMode.Lax, // Lax thay vì Strict để tương thích với cross-origin requests
-            Expires = DateTime.UtcNow.AddDays(7), // 7 ngày
+            Expires = DateTime.UtcNow.AddDays(14), // 14 ngày
             Path = "/"
         };
 
@@ -85,11 +85,11 @@ public class AuthController : ControllerBase
             // Lưu refresh token vào HTTP-only cookie
             SetRefreshTokenCookie(response.RefreshToken);
             
-            // Không trả refresh token trong response body nữa
             response.RefreshToken = null;
             
             // Return the response with tokens immediately
             return Ok(response);
+
         }
 
         return BadRequest(response);
@@ -193,7 +193,6 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<ActionResult<AuthResponse>> RefreshToken()
     {
-        // Lấy refresh token từ cookie thay vì request body
         var refreshToken = GetRefreshTokenFromCookie();
         if (string.IsNullOrEmpty(refreshToken))
         {
@@ -207,7 +206,6 @@ public class AuthController : ControllerBase
             // Lưu refresh token mới vào cookie
             SetRefreshTokenCookie(response.RefreshToken);
             
-            // Không trả refresh token trong response body
             response.RefreshToken = null;
             
             return Ok(response);
