@@ -28,6 +28,11 @@ class TokenManager {
 // Singleton instance
 const tokenManager = new TokenManager();
 
+// Debug: Expose tokenManager to window in development
+if (process.env.NODE_ENV === 'development') {
+  window.tokenManager = tokenManager;
+}
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,

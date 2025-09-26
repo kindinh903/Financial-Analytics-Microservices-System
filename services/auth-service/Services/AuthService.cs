@@ -214,16 +214,15 @@ public class AuthService : IAuthService
                 };
             }
 
-            // Generate new tokens
+            // Chỉ generate access token mới - không rotate refresh token
             var newAccessToken = _jwtService.GenerateAccessToken(user);
-            var newRefreshToken = _jwtService.GenerateRefreshToken(user);
 
             return new AuthResponse
             {
                 Success = true,
                 Message = "Token refreshed successfully",
                 AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken,
+                RefreshToken = null, // Không trả về refresh token mới
                 User = new UserInfo
                 {
                     Id = user.Id,

@@ -203,9 +203,8 @@ public class AuthController : ControllerBase
         
         if (response.Success)
         {
-            // Lưu refresh token mới vào cookie
-            SetRefreshTokenCookie(response.RefreshToken);
-            
+            // Không rotate refresh token - giữ nguyên refresh token cũ
+            // Chỉ trả về access token mới
             response.RefreshToken = null;
             
             return Ok(response);
