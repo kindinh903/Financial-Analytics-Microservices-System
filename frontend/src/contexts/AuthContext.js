@@ -36,6 +36,38 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // Effect để theo dõi thay đổi token
+  useEffect(() => {
+    const handleTokenChange = (token) => {
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData && !isAuthenticated) {
+        // Có token và user data nhưng chưa authenticated -> set authenticated
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('user');
+        }
+      } else if (!token && isAuthenticated) {
+        // Không có token nhưng vẫn authenticated -> logout
+        setIsAuthenticated(false);
+      }
+    };
+
+    // Listen to token changes
+    tokenManager.addListener(handleTokenChange);
+    
+    // Check ngay khi mount
+    handleTokenChange(tokenManager.getAccessToken());
+    
+    return () => {
+      tokenManager.removeListener(handleTokenChange);
+    };
+  }, [isAuthenticated]);
+
   const login = (userData, accessToken) => {
     // Lưu user info vào localStorage
     localStorage.setItem('user', JSON.stringify(userData));

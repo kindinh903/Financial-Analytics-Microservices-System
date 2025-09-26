@@ -6,10 +6,17 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 class TokenManager {
   constructor() {
     this.accessToken = null;
+    this.listeners = [];
   }
 
   setAccessToken(token) {
+    const previousToken = this.accessToken;
     this.accessToken = token;
+    
+    // Notify listeners about token change
+    if (previousToken !== token) {
+      this.notifyListeners();
+    }
   }
 
   getAccessToken() {
@@ -17,11 +24,30 @@ class TokenManager {
   }
 
   clearAccessToken() {
+    const previousToken = this.accessToken;
     this.accessToken = null;
+    
+    // Notify listeners about token change
+    if (previousToken !== null) {
+      this.notifyListeners();
+    }
   }
 
   hasAccessToken() {
     return this.accessToken !== null;
+  }
+
+  // Event listener methods
+  addListener(callback) {
+    this.listeners.push(callback);
+  }
+
+  removeListener(callback) {
+    this.listeners = this.listeners.filter(listener => listener !== callback);
+  }
+
+  notifyListeners() {
+    this.listeners.forEach(callback => callback(this.accessToken));
   }
 }
 
