@@ -6,6 +6,7 @@ using System.Text;
 using AuthService.Data;
 using AuthService.Models;
 using AuthService.Services;
+using AuthService.Utils;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,6 +73,11 @@ builder.Services.AddScoped<RedisCacheService>();
 // Add UserServiceClient
 builder.Services.AddHttpClient<UserServiceClient>();
 
+// Add Kafka Consumer
+builder.Services.AddScoped<AuthService.Utils.KafkaConsumer>();
+builder.Services.AddHostedService<KafkaConsumerService>();
+
+
 var app = builder.Build();
 
 // Apply database migrations automatically
@@ -110,4 +116,4 @@ app.MapGet("/health", () => new {
     timestamp = DateTime.UtcNow
 });
 
-app.Run(); 
+app.Run();
