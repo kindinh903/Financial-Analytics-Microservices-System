@@ -7,6 +7,7 @@ const { startKafkaConsumer } = require('./kafkaConsumer');
 
 const userRoutes = require('./routes/user');
 const { authenticateToken } = require('./middleware/auth');
+const { startKafkaProducer } = require('./kafkaPublisher');
 
 const app = express();
 const PORT = process.env.PORT || 8088; // Different port from auth service
@@ -60,6 +61,13 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/user_mana
     console.log('Kafka consumer started');
   } catch (err) {
     console.error('Failed to start Kafka consumer:', err && err.message ? err.message : err);
+  };
+
+  try {
+    await startKafkaProducer();
+    console.log('Kafka producer started');
+  } catch (err) {
+    console.error('Failed to start Kafka producer:', err && err.message ? err.message : err);
   }
 })
 .catch((err) => {

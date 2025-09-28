@@ -7,6 +7,7 @@ const {
   requireOwnership 
 } = require('../middleware/auth');
 
+const { publishUserUpdate } = require('../kafkaPublisher');
 const router = express.Router();
 
 // Validation middleware
@@ -182,7 +183,9 @@ router.put('/admin/users/:id', requireRole(['admin']), async (req, res) => {
     
     user.updatedAt = new Date();
     await user.save();
-
+    publishUserUpdate(user);
+    console.log('User updated by admin:', user);
+    
     res.json({
       success: true,
       message: 'User updated successfully',
