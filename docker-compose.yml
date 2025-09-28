@@ -245,7 +245,7 @@ services:
       timeout: 3s
       retries: 3
 
-  redis:
+  redis:  # Shared Redis instance for development, dedicated instances per service can be used in production
     image: redis:7.2-alpine
     container_name: redis
     ports:

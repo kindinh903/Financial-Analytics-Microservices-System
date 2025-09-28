@@ -12,12 +12,16 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
         internal readonly IJwtService _jwtService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly RedisCacheService _redisCacheService;
+    private readonly UserServiceClient _userServiceClient;
 
-    public AuthService(UserManager<ApplicationUser> userManager, IJwtService jwtService, ApplicationDbContext dbContext)
+    public AuthService(UserManager<ApplicationUser> userManager, IJwtService jwtService, ApplicationDbContext dbContext, RedisCacheService redisCacheService, UserServiceClient userServiceClient)
     {
         _userManager = userManager;
         _jwtService = jwtService;
         _dbContext = dbContext;
+        _redisCacheService = redisCacheService;
+        _userServiceClient = userServiceClient;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -214,14 +218,60 @@ public class AuthService : IAuthService
                 };
             }
 
-            // Chỉ generate access token mới - không rotate refresh token
-            var newAccessToken = _jwtService.GenerateAccessToken(user);
+            // ✅ FIX: Lấy thông tin permissions/tier/features từ cache hoặc UserService
+            var userPermissions = await _redisCacheService.GetAsync<UserPermissionsDto>(userId);
+            if (userPermissions == null)
+            {
+                Console.WriteLine("User permissions not found in Redis cache during refresh, userPermissions: ", userPermissions);
+                userPermissions = await _userServiceClient.GetUserPermissionsAsync(
+                    userId,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName
+                );
+                Console.WriteLine("Fetched user permissions from user service during refresh: ", userPermissions);
+                if (userPermissions != null)
+                    await _redisCacheService.SetAsync(userId, userPermissions);
+                else
+                {
+                    Console.WriteLine("User permissions not found in user service during refresh");
+                    // Fallback to basic permissions instead of failing
+                    userPermissions = new UserPermissionsDto
+                    {
+                        Role = user.Role,
+                        Permissions = new List<string> { "free" },
+                        Features = new List<string> { "basic-dashboard", "news" }
+                    };
+                }
+            }
+            else
+            {
+                Console.WriteLine("User permissions found in Redis cache during refresh");
+            }
+
+            // ✅ FIX: Generate access token with permissions
+            var claims = new Dictionary<string, object?>
+            {
+                ["permissions"] = userPermissions?.Permissions ?? new List<string>(),
+                ["role"] = userPermissions?.Role ?? "user",
+                ["features"] = userPermissions?.Features ?? new List<string>()
+            };
+
+            var appUser = new ApplicationUser {
+                Id = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = userPermissions?.Role ?? "user",
+                IsEmailVerified = user.IsEmailVerified
+            };
+            var enrichedAccessToken = _jwtService.GenerateAccessToken(appUser, claims);
 
             return new AuthResponse
             {
                 Success = true,
                 Message = "Token refreshed successfully",
-                AccessToken = newAccessToken,
+                AccessToken = enrichedAccessToken,
                 RefreshToken = null, // Không trả về refresh token mới
                 User = new UserInfo
                 {
@@ -229,7 +279,7 @@ public class AuthService : IAuthService
                     Email = user.Email,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
-                    Role = user.Role,
+                    Role = userPermissions?.Role ?? user.Role,
                     IsEmailVerified = user.IsEmailVerified
                 }
             };

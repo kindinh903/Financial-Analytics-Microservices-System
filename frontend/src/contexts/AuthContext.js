@@ -27,14 +27,47 @@ export const AuthProvider = ({ children }) => {
         // Kiểm tra xem có access token trong memory không
         if (tokenManager.hasAccessToken()) {
           setIsAuthenticated(true);
+          setLoading(false);
+        } else {
+          // ✅ FIX: Access token không có trong memory → Tự động refresh
+          console.log('Access token not found in memory, attempting auto-refresh...');
+          attemptAutoRefresh();
         }
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('user');
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
+
+  // ✅ FIX: Function để tự động refresh token
+  const attemptAutoRefresh = async () => {
+    try {
+      console.log('Attempting to refresh token on app startup...');
+      
+      // Import api dynamically để tránh circular dependency
+      const { authService } = await import('../services/api');
+      const refreshResponse = await authService.refreshToken();
+      
+      if (refreshResponse.data.accessToken) {
+        console.log('Auto-refresh successful, user is authenticated');
+        tokenManager.setAccessToken(refreshResponse.data.accessToken);
+        setIsAuthenticated(true);
+      } else {
+        console.log('Auto-refresh failed: No access token in response');
+        logout();
+      }
+    } catch (error) {
+      console.log('Auto-refresh failed:', error.message);
+      // Refresh thất bại → Clear data và redirect to login
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Effect để theo dõi thay đổi token
   useEffect(() => {
