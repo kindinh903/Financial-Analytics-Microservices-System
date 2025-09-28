@@ -121,6 +121,9 @@ const Profile = () => {
   };
 
   const getRoleBadge = (role) => {
+    // Handle single role (as per user data structure)
+    if (!role) return <Badge color="default" text="USER" />;
+    
     const roleConfig = {
       user: { color: 'default', icon: <UserOutlined /> },
       premium: { color: 'gold', icon: <CrownOutlined /> },
@@ -128,22 +131,36 @@ const Profile = () => {
     };
     
     const config = roleConfig[role] || roleConfig.user;
-    return <Badge color={config.color} text={role?.toUpperCase()} />;
+    return (
+      <Badge 
+        color={config.color} 
+        text={role?.toUpperCase()} 
+      />
+    );
   };
 
-  const getSubscriptionStatus = (subscription) => {
-    if (!subscription || !subscription.isActive) {
-      return <Tag color="default">Chưa đăng ký</Tag>;
+  const getPermissionTags = (permissions) => {
+    if (!permissions || permissions.length === 0) {
+      return <Tag color="default">No special permissions</Tag>;
     }
     
-    const planColors = {
-      free: 'default',
-      basic: 'blue',
-      premium: 'gold',
-      enterprise: 'purple'
-    };
+    return permissions.map((permission, index) => (
+      <Tag key={index} color="blue" className="mb-1">
+        {permission}
+      </Tag>
+    ));
+  };
+
+  const getFeatureTags = (features) => {
+    if (!features || features.length === 0) {
+      return <Tag color="default"></Tag>;
+    }
     
-    return <Tag color={planColors[subscription.plan]}>{subscription.plan.toUpperCase()}</Tag>;
+    return features.map((feature, index) => (
+      <Tag key={index} color="green" className="mb-1">
+        {feature}
+      </Tag>
+    ));
   };
 
   const handleLogout = () => {
@@ -217,8 +234,17 @@ const Profile = () => {
                 </div>
                 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Gói dịch vụ:</p>
-                  {getSubscriptionStatus(user.subscription)}
+                  <p className="text-sm text-gray-600 mb-1">Permissions:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {getPermissionTags(user.permissions)}
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Features:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {getFeatureTags(user.features)}
+                  </div>
                 </div>
                 
                 {/* Admin Panel Access Button */}

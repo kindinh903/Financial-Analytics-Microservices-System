@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
+import { authService, userService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -23,6 +23,22 @@ export default function Login() {
         // Sử dụng AuthContext để handle login
         if (result.accessToken && result.user) {
           login(result.user, result.accessToken);
+          
+          // Fetch user profile từ user-service và lưu vào localStorage
+          try {
+            const profileResponse = await userService.getProfile();
+            if (profileResponse.data.success) {
+              const userData = profileResponse.data.user;
+              // Lưu thông tin profile đầy đủ vào localStorage
+              localStorage.setItem('user', JSON.stringify(userData));
+              console.log('User profile fetched and saved to localStorage:', userData);
+            } else {
+              console.warn('Could not fetch user profile:', profileResponse.data.message);
+            }
+          } catch (profileError) {
+            console.error('Error fetching user profile after login:', profileError);
+            // Không block login process nếu fetch profile thất bại
+          }
         }
         
         navigate('/'); // Chuyển hướng về trang chủ

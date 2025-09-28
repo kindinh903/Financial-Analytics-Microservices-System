@@ -45,7 +45,10 @@ namespace AuthService.Services
                 Console.WriteLine($"Response content: {await response.Content.ReadAsStringAsync()}");
                 if (response.IsSuccessStatusCode)
                 {
-                    return await response.Content.ReadFromJsonAsync<UserPermissionsDto>();
+                    Console.WriteLine($"Successfully retrieved user permissions for userId: {userId}");
+                    var userPermissions = await response.Content.ReadFromJsonAsync<UserPermissionsDto>();
+                    Console.WriteLine($"User Permissions: Role={userPermissions?.Role}, Permissions=[{string.Join(", ", userPermissions?.Permissions ?? new List<string>())}], Features=[{string.Join(", ", userPermissions?.Features ?? new List<string>())}]");
+                    return userPermissions;
                 }
                 Console.WriteLine($"Failed to get user permissions for userId: {userId}, StatusCode: {response.StatusCode}");
                 return null;

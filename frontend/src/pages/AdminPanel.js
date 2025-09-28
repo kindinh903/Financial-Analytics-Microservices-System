@@ -762,6 +762,49 @@ const AdminPanel = () => {
               </Form.Item>
               
               <Form.Item 
+                label="Permissions" 
+                name="permissions"
+                tooltip="Select user permissions"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="Select permissions"
+                  allowClear
+                >
+                  <Option value="free">Free</Option>
+                  <Option value="basic">Basic</Option>
+                  <Option value="premium">Premium</Option>
+                  <Option value="advanced">Advanced</Option>
+                  <Option value="admin">Admin</Option>
+                  <Option value="super-admin">Super Admin</Option>
+                </Select>
+              </Form.Item>
+              
+              <Form.Item 
+                label="Features" 
+                name="features"
+                tooltip="Select available features for user"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="Select features"
+                  allowClear
+                >
+                  <Option value="basic-dashboard">Basic Dashboard</Option>
+                  <Option value="advanced-dashboard">Advanced Dashboard</Option>
+                  <Option value="news">News</Option>
+                  <Option value="real-time-data">Real-time Data</Option>
+                  <Option value="advanced-analytics">Advanced Analytics</Option>
+                  <Option value="portfolio-management">Portfolio Management</Option>
+                  <Option value="alerts">Alerts & Notifications</Option>
+                  <Option value="export-data">Export Data</Option>
+                  <Option value="api-access">API Access</Option>
+                  <Option value="custom-indicators">Custom Indicators</Option>
+                  <Option value="backtesting">Backtesting</Option>
+                </Select>
+              </Form.Item>
+              
+              <Form.Item 
                 label="Subscription Plan" 
                 name="subscription"
               >

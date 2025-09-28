@@ -6,6 +6,8 @@ const authenticateToken = async (req, res, next) => {
     const email = req.header('x-user-email');
     const firstName = req.header('x-user-first-name');
     const lastName = req.header('x-user-last-name');
+    const features = req.header('x-user-features');
+    const permissions = req.header('x-user-permissions');
     console.log('User context extracted from headers:', { userId, role, email, firstName, lastName });  
     if (!userId) {
       return res.status(401).json({
@@ -19,7 +21,9 @@ const authenticateToken = async (req, res, next) => {
       role: role || 'user',
       email,
       firstName,
-      lastName
+      lastName,
+      features: features ? features.split(',') : [],
+      permissions: permissions ? permissions.split(',') : []
     };
     next();
   } catch (error) {
@@ -68,7 +72,7 @@ const requireOwnership = (paramName = 'userId') => {
       return next(); // Admins can access any user's data
     }
 
-    if (req.user._id.toString() !== targetUserId) {
+    if (req.user.authUserId !== targetUserId) {
       return res.status(403).json({ 
         error: 'Access denied',
         message: 'You can only access your own data'

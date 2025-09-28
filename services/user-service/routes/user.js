@@ -386,17 +386,10 @@ router.put('/admin/settings', requireRole(['admin']), async (req, res) => {
 // ==================== REGULAR USER ENDPOINTS ====================
 
 // Get user permissions/tier/features (for AuthService)
-router.get('/:userId/permissions', async (req, res) => {
+router.get('/:userId/permissions', requireOwnership('userId'), async (req, res) => {
   try {
     const userReq = req.user;
     const { userId } = req.params;
-    if (userReq.authUserId !== userId && !userReq.role.includes('admin')) {
-      console.log('User is not authorized to access this resource', userReq);
-      return res.status(403).json({
-        error: 'Forbidden',
-        message: 'You do not have permission to access this resource'
-      });
-    }
     const user = await User.findOne({ authUserId: userId });
     if (!user) {
       return res.status(404).json({

@@ -10,7 +10,7 @@ namespace AuthService.Services;
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-        internal readonly IJwtService _jwtService;
+    internal readonly IJwtService _jwtService;
     private readonly ApplicationDbContext _dbContext;
     private readonly RedisCacheService _redisCacheService;
     private readonly UserServiceClient _userServiceClient;
@@ -218,7 +218,6 @@ public class AuthService : IAuthService
                 };
             }
 
-            // ✅ FIX: Lấy thông tin permissions/tier/features từ cache hoặc UserService
             var userPermissions = await _redisCacheService.GetAsync<UserPermissionsDto>(userId);
             if (userPermissions == null)
             {
@@ -253,7 +252,6 @@ public class AuthService : IAuthService
             var claims = new Dictionary<string, object?>
             {
                 ["permissions"] = userPermissions?.Permissions ?? new List<string>(),
-                ["role"] = userPermissions?.Role ?? "user",
                 ["features"] = userPermissions?.Features ?? new List<string>()
             };
 
