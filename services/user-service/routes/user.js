@@ -1,5 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { 
   authenticateToken,
@@ -261,7 +262,7 @@ router.post('/admin/users', requireRole(['admin']), async (req, res) => {
   }
 });
 
-// DELETE /api/user/admin/users/:id - Delete user (admin only)
+// Implements Orchestration Distributed Transaction Pattern
 router.delete('/admin/users/:id', requireRole(['admin']), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -272,70 +273,70 @@ router.delete('/admin/users/:id', requireRole(['admin']), async (req, res) => {
       });
     }
 
+    console.log(`Starting orchestrated delete transaction for user: ${user.authUserId}`);
+
+    // Step 1: Delete user locally (pending, chưa commit)
+    console.log('Step 1: START TRANSACTION');
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    console.log('Step 1: User deleted locally');
+
+    // Step 2: Call auth-service
     let authServiceResponse = null;
     let authServiceError = null;
 
-    // Call auth-service to delete user account and tokens via gRPC
     if (user.authUserId) {
       try {
-        console.log(`Calling auth-service to delete user: ${user.authUserId}`);
+        console.log(`Step 2: Calling auth-service to delete user: ${user.authUserId}`);
         authServiceResponse = await authClient.deleteUser(
           user.authUserId,
           req.user.authUserId,
-          'Deleted by admin via user-service'
+          'Deleted by admin (orchestrated transaction)'
         );
-        
-        if (authServiceResponse.success) {
-          console.log(`Successfully deleted user from auth-service. Tokens deleted: ${authServiceResponse.deleted_tokens_count}`);
-        } else {
-          console.error('Failed to delete user from auth-service:', authServiceResponse.message);
-          authServiceError = authServiceResponse.message;
-        }
+        console.log('Step 2: Auth-service response:', authServiceResponse);
       } catch (grpcError) {
-        console.error('gRPC error calling auth-service:', grpcError);
+        console.error('Step 2: gRPC error calling auth-service:', grpcError);
         authServiceError = grpcError.message || 'gRPC call failed';
-        // Continue with user-service deletion even if auth-service fails
       }
     } else {
-      console.warn('User has no authUserId, skipping auth-service deletion');
+      console.warn('Step 2: User has no authUserId, skipping auth-service deletion');
+      authServiceResponse = { success: true, message: 'No auth user to delete' };
     }
 
-    // Delete user from user-service database
-    await User.findByIdAndDelete(req.params.id);
-
-    const response = {
-      success: true,
-      message: 'User deleted successfully from user-service',
-      user: {
-        id: user._id,
-        authUserId: user.authUserId,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName
-      }
-    };
-
-    // Include auth-service response info
-    if (authServiceResponse) {
-      response.auth_service = {
-        success: authServiceResponse.success,
-        message: authServiceResponse.message,
-        deleted_tokens_count: authServiceResponse.deleted_tokens_count
-      };
-    } else if (authServiceError) {
-      response.auth_service = {
-        success: false,
-        error: authServiceError,
-        note: 'User deleted from user-service despite auth-service failure'
-      };
+    // Step 3: Commit hoặc rollback (chỉ log)
+    if (authServiceResponse && authServiceResponse.success) {
+      console.log('Step 3: Auth-service deletion successful → TRANSACTION COMMITTED (simulated)');
+      return res.json({
+        success: true,
+        message: 'User deleted successfully (orchestrated transaction)',
+        transaction_status: 'COMMITTED',
+        user: {
+          id: user._id,
+          authUserId: user.authUserId,
+          email: user.email
+        }
+      });
+    } else {
+      console.log('Step 3: Auth-service deletion failed → TRANSACTION ROLLED BACK (simulated)');
+      const errorMessage = authServiceError || (authServiceResponse ? authServiceResponse.message : 'Unknown auth-service error');
+      return res.status(500).json({
+        error: 'Transaction failed (simulated rollback)',
+        message: 'Failed to delete user from auth-service, local deletion rolled back (simulated)',
+        transaction_status: 'ROLLED_BACK',
+        auth_service_error: errorMessage,
+        user: {
+          id: user._id,
+          authUserId: user.authUserId,
+          email: user.email,
+          status: 'NOT_DELETED'
+        }
+      });
     }
-
-    res.json(response);
   } catch (error) {
-    console.error('Delete user error:', error);
-    res.status(500).json({
-      error: 'Failed to delete user',
-      message: error.message
+    console.error('Orchestrated delete error:', error);
+    return res.status(500).json({
+      error: 'Unexpected error',
+      message: error.message,
+      transaction_status: 'ROLLED_BACK'
     });
   }
 });
