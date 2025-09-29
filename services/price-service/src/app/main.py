@@ -8,6 +8,7 @@ from app.routes.api import router as api_router
 from app.routes.ws import router as ws_router
 from app.services.ws_manager import WSManager
 from app.services.kafka_producer import kafka_producer
+from app.services.price_monitor import price_monitor
 import logging
 import uvicorn
 import asyncio
@@ -47,10 +48,15 @@ async def lifespan(app: FastAPI):
     await grpc_server.start()
     logging.info("gRPC server started on port 9090")
     app.state.grpc_server = grpc_server
+        
+    # Start price monitor for real-time price alerts
+    asyncio.create_task(price_monitor.start_monitoring())
+    logging.info("Price monitoring service started")
     
     yield
     
     # Shutdown
+    await price_monitor.stop_monitoring()
     await grpc_server.stop(grace=5.0)
     await redis_client.close()
     await influx_writer.close()

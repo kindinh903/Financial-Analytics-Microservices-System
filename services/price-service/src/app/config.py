@@ -14,6 +14,19 @@ class Settings(BaseSettings):
     KAFKA_BOOTSTRAP_SERVERS: str = "kafka:29092"
     KAFKA_PRICE_TOPIC: str = "price-updates"
     KAFKA_GROUP_ID: str = "price-service-group"
+    
+    # Email Settings
+    EMAIL_SMTP_SERVER: str = "smtp.gmail.com"
+    EMAIL_SMTP_PORT: int = 587
+    EMAIL_USERNAME: str = "kindinh903@gmail.com"
+    EMAIL_PASSWORD: str = "sckixcjfsblakvxp"
+    EMAIL_FROM: str = "Financial Analytics System <kindinh903@gmail.com>"
+    EMAIL_USE_TLS: bool = True
+    
+    # Price Alert Settings
+    ALERT_CHECK_INTERVAL: int = 5  # seconds
+    MAX_ALERTS_PER_USER: int = 50
+    ALERT_COOLDOWN_MINUTES: int = 15  # prevent spam
 
 
 settings = Settings()
