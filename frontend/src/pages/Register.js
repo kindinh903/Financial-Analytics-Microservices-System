@@ -1,11 +1,13 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
+import { authService, userService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Register() {
   const { register, handleSubmit } = useForm();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onSubmit = async data => {
     if (data.password !== data.confirmPassword) {
@@ -22,25 +24,36 @@ export default function Register() {
         FirstName: data.firstName,
         LastName: data.lastName,
         ConfirmPassword: data.confirmPassword
-      },
-      { withCredentials: true });
+      });
 
-      // Nếu API trả về status 201 hoặc 200
       const result = response.data;
       console.log('API response:', result);
 
       if (result.success !== false) {
         alert('Đăng ký thành công!\n' + (result.message || 'Account created successfully'));
-        if (result.accessToken) {
-          localStorage.setItem('accessToken', result.accessToken);
-          localStorage.setItem('refreshToken', result.refreshToken);
-          console.log('Access token saved');
-        }
-        if (result.user) {
-        localStorage.setItem('user', JSON.stringify(result.user));
+        
+        // Sử dụng AuthContext để handle login sau khi đăng ký thành công
+        if (result.accessToken && result.user) {
+          login(result.user, result.accessToken);
+          
+          // Fetch user profile từ user-service và lưu vào localStorage
+          try {
+            const profileResponse = await userService.getProfile();
+            if (profileResponse.data.success) {
+              const userData = profileResponse.data.user;
+              // Lưu thông tin profile đầy đủ vào localStorage
+              localStorage.setItem('user', JSON.stringify(userData));
+              console.log('User profile fetched and saved to localStorage:', userData);
+            } else {
+              console.warn('Could not fetch user profile:', profileResponse.data.message);
+            }
+          } catch (profileError) {
+            console.error('Error fetching user profile after registration:', profileError);
+            // Không block registration process nếu fetch profile thất bại
+          }
         }
 
-        navigate('/'); // Chuyển hướng về dashboard
+        navigate('/'); // Chuyển hướng về trang chủ
       } else {
         alert('Đăng ký thất bại:\n' + result.message);
       }
