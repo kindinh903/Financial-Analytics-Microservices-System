@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+option csharp_namespace = "AuthService.Protos";
+
+package authservice;
+
+service AuthService {
+  // Delete user account and related data
+  rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse);
+  
+  // Invalidate user sessions and tokens
+  rpc InvalidateUserSessions (InvalidateUserSessionsRequest) returns (InvalidateUserSessionsResponse);
+  
+  // Get user info by ID
+  rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+// Delete user request
+message DeleteUserRequest {
+  string user_id = 1;
+  string requester_id = 2;
+  string reason = 3;
+}
+
+// Delete user response
+message DeleteUserResponse {
+  bool success = 1;
+  string message = 2;
+  int32 deleted_tokens_count = 3;
+}
+
+// Invalidate user sessions request
+message InvalidateUserSessionsRequest {
+  string user_id = 1;
+  string requester_id = 2;
+}
+
+// Invalidate user sessions response
+message InvalidateUserSessionsResponse {
+  bool success = 1;
+  string message = 2;
+  int32 invalidated_tokens_count = 3;
+}
+
+// Get user info request
+message GetUserInfoRequest {
+  string user_id = 1;
+}
+
+// Get user info response
+message GetUserInfoResponse {
+  bool success = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+}
+
+// User info message
+message UserInfo {
+  string id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string role = 5;
+  bool is_active = 6;
+  bool is_email_verified = 7;
+  string created_at = 8;
+  string last_login = 9;
+}

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using AuthService.Models.DTOs;
 using AuthService.Services;
 using AuthService.Utils;
-using AuthService.Models;
 
 namespace AuthService.Controllers;
 

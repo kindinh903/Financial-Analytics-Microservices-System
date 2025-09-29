@@ -4,9 +4,8 @@ services:
   auth-service:
     build: ./services/auth-service
     container_name: auth-service
-    expose: ["8087"]         
+    expose: ["8087", "5087"]         
     environment:
-      - ASPNETCORE_URLS=http://+:8087
       - ConnectionStrings__DefaultConnection=Host=auth-db;Port=5432;Database=mydb;Username=admin;Password=secret
       - Jwt__Key=daiduongmenhmongoihoiemodauhuhuhihihehe_2025_super_secret_key_for_jwt_signing_256_bits_minimum_required
       - Jwt__Issuer=http://auth-service:8087
@@ -14,14 +13,18 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - ConnectionStrings__Redis=redis:6379,abortConnect=false
     depends_on:
-      - mongodb
-      - redis
-      - auth-db
+      auth-db:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8087/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8087/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   auth-db:
     image: postgres:15
@@ -174,6 +177,7 @@ services:
       - KAFKA_BROKER=kafka:29092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - AUTH_SERVICE_GRPC_URL=auth-service:5087
     depends_on:
       - kafka
       - redis

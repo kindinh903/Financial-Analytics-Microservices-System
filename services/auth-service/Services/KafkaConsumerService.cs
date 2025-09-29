@@ -23,23 +23,30 @@ namespace AuthService.Services
         {
             _logger.LogInformation("Kafka Consumer Service is starting...");
 
-            try
+            // Add delay to allow main application to start first
+            await Task.Delay(5000, stoppingToken);
+
+            while (!stoppingToken.IsCancellationRequested)
             {
-                // Use a scope to get scoped services
-                using var scope = _serviceProvider.CreateScope();
-                var kafkaConsumer = scope.ServiceProvider.GetRequiredService<KafkaConsumer>();
-                
-                _logger.LogInformation("Starting Kafka consumer for user updates...");
-                await kafkaConsumer.ConsumeUserUpdateClaimsAsync(stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("Kafka Consumer Service was cancelled");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fatal error in Kafka Consumer Service");
-                throw;
+                try
+                {
+                    // Use a scope to get scoped services
+                    using var scope = _serviceProvider.CreateScope();
+                    var kafkaConsumer = scope.ServiceProvider.GetRequiredService<KafkaConsumer>();
+                    
+                    _logger.LogInformation("Starting Kafka consumer for user updates...");
+                    await kafkaConsumer.ConsumeUserUpdateClaimsAsync(stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Kafka Consumer Service was cancelled");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in Kafka Consumer Service, retrying in 30 seconds...");
+                    await Task.Delay(30000, stoppingToken); // Wait 30 seconds before retrying
+                }
             }
         }
 

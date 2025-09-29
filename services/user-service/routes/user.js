@@ -8,7 +8,11 @@ const {
 } = require('../middleware/auth');
 
 const { publishUserUpdate } = require('../kafkaPublisher');
+const { AuthServiceClient } = require('../services/authServiceClient');
 const router = express.Router();
+
+// Initialize gRPC client
+const authClient = new AuthServiceClient();
 
 // Validation middleware
 const validateProfileUpdate = [
@@ -268,12 +272,65 @@ router.delete('/admin/users/:id', requireRole(['admin']), async (req, res) => {
       });
     }
 
+    let authServiceResponse = null;
+    let authServiceError = null;
+
+    // Call auth-service to delete user account and tokens via gRPC
+    if (user.authUserId) {
+      try {
+        console.log(`Calling auth-service to delete user: ${user.authUserId}`);
+        authServiceResponse = await authClient.deleteUser(
+          user.authUserId,
+          req.user.authUserId,
+          'Deleted by admin via user-service'
+        );
+        
+        if (authServiceResponse.success) {
+          console.log(`Successfully deleted user from auth-service. Tokens deleted: ${authServiceResponse.deleted_tokens_count}`);
+        } else {
+          console.error('Failed to delete user from auth-service:', authServiceResponse.message);
+          authServiceError = authServiceResponse.message;
+        }
+      } catch (grpcError) {
+        console.error('gRPC error calling auth-service:', grpcError);
+        authServiceError = grpcError.message || 'gRPC call failed';
+        // Continue with user-service deletion even if auth-service fails
+      }
+    } else {
+      console.warn('User has no authUserId, skipping auth-service deletion');
+    }
+
+    // Delete user from user-service database
     await User.findByIdAndDelete(req.params.id);
 
-    res.json({
+    const response = {
       success: true,
-      message: 'User deleted successfully'
-    });
+      message: 'User deleted successfully from user-service',
+      user: {
+        id: user._id,
+        authUserId: user.authUserId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName
+      }
+    };
+
+    // Include auth-service response info
+    if (authServiceResponse) {
+      response.auth_service = {
+        success: authServiceResponse.success,
+        message: authServiceResponse.message,
+        deleted_tokens_count: authServiceResponse.deleted_tokens_count
+      };
+    } else if (authServiceError) {
+      response.auth_service = {
+        success: false,
+        error: authServiceError,
+        note: 'User deleted from user-service despite auth-service failure'
+      };
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({

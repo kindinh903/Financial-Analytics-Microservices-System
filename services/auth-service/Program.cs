@@ -7,12 +7,16 @@ using AuthService.Data;
 using AuthService.Models;
 using AuthService.Services;
 using AuthService.Utils;
+using AuthService.GrpcServices;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Add gRPC services
+builder.Services.AddGrpc();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -73,10 +77,16 @@ builder.Services.AddScoped<RedisCacheService>();
 // Add UserServiceClient
 builder.Services.AddHttpClient<UserServiceClient>();
 
-// Add Kafka Consumer
+// Add Kafka Consumer - Re-enabling for testing
 builder.Services.AddScoped<AuthService.Utils.KafkaConsumer>();
 builder.Services.AddHostedService<KafkaConsumerService>();
 
+
+// Configure host options
+builder.Services.Configure<HostOptions>(opts =>
+{
+    opts.ShutdownTimeout = TimeSpan.FromSeconds(30);
+});
 
 var app = builder.Build();
 
@@ -92,6 +102,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"Error creating database: {ex.Message}");
+        throw; // Stop application if database setup fails
     }
 }
 
@@ -109,10 +120,21 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Map gRPC services
+app.MapGrpcService<AuthService.GrpcServices.AuthGrpcService>();
+
 // Health check endpoint
 app.MapGet("/health", () => new { 
     status = "OK", 
     service = "auth-service",
+    timestamp = DateTime.UtcNow
+});
+
+// gRPC health check endpoint
+app.MapGet("/grpc-health", () => new { 
+    status = "OK", 
+    service = "auth-grpc-service",
+    port = 5087,
     timestamp = DateTime.UtcNow
 });
 

@@ -16,5 +16,7 @@ namespace AuthService.Models
         public DateTime ExpiresAt { get; set; }
         public bool IsRevoked { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? RevokedAt { get; set; }
+
     }
 }
